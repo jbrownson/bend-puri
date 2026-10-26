@@ -1,37 +1,40 @@
 import Base
-import ./handler.bend as P
+import ./ask.bend as A
 
-# LAW: adding the empty handler underneath changes nothing.
-law plus_empty_left:
-  for -M: Type -> Type
-  for -E: Data
-  for h: P.Handler(M, E)
-  for +e: E
-  {P.Handler.plus(M, E, P.Handler.empty(M, E), h)(e) == h(e) : Maybe<M(Unit)>}
+# These laws are about Ask, so they hold for event handlers and for
+# hover probes alike.
 
-# LAW: adding the empty handler on top changes nothing.
-law plus_empty_right:
-  for -M: Type -> Type
-  for -E: Data
-  for h: P.Handler(M, E)
-  for +e: E
-  {P.Handler.plus(M, E, h, P.Handler.empty(M, E))(e) == h(e) : Maybe<M(Unit)>}
+# LAW: an empty base changes nothing.
+law over_none_base:
+  for -X: Data
+  for -Y: Type
+  for q: A.Ask(X, Y)
+  for +x: X
+  {A.Ask.over(X, Y, A.Ask.none(X, Y), q)(x) == q(x) : Maybe<Y>}
 
-# LAW: how three handlers are grouped doesn't matter, only their order.
-law plus_assoc:
-  for -M: Type -> Type
-  for -E: Data
-  for a: P.Handler(M, E)
-  for b: P.Handler(M, E)
-  for c: P.Handler(M, E)
-  for +e: E
-  {P.Handler.plus(M, E, P.Handler.plus(M, E, a, b), c)(e) == P.Handler.plus(M, E, a, P.Handler.plus(M, E, b, c))(e) : Maybe<M(Unit)>}
+# LAW: an empty layer on top changes nothing.
+law over_none_above:
+  for -X: Data
+  for -Y: Type
+  for q: A.Ask(X, Y)
+  for +x: X
+  {A.Ask.over(X, Y, q, A.Ask.none(X, Y))(x) == q(x) : Maybe<Y>}
 
-# LAW: when the later handler answers, its answer wins.
-law later_wins:
-  for -M: Type -> Type
-  for -E: Data
-  for earlier: P.Handler(M, E)
-  for t: M(Unit)
-  for +e: E
-  {P.Handler.plus(M, E, earlier, x => Some{t})(e) == Some{t} : Maybe<M(Unit)>}
+# LAW: how three layers are grouped doesn't matter, only their order.
+law over_assoc:
+  for -X: Data
+  for -Y: Type
+  for a: A.Ask(X, Y)
+  for b: A.Ask(X, Y)
+  for c: A.Ask(X, Y)
+  for +x: X
+  {A.Ask.over(X, Y, A.Ask.over(X, Y, a, b), c)(x) == A.Ask.over(X, Y, a, A.Ask.over(X, Y, b, c))(x) : Maybe<Y>}
+
+# LAW: when the layer on top answers, its answer wins.
+law above_wins:
+  for -X: Data
+  for -Y: Type
+  for base: A.Ask(X, Y)
+  for y: Y
+  for +x: X
+  {A.Ask.over(X, Y, base, z => Some{y})(x) == Some{y} : Maybe<Y>}

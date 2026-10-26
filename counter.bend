@@ -23,7 +23,7 @@ def on_escape(e: Event) -> Maybe<Count(Unit)>:
 
 # on_escape is added later, so it wins when both answer.
 def handlers() -> P.Handler(A => Count(A), Event):
-  P.Handler.plus(A => Count(A), Event, e => on_key(e), e => on_escape(e))
+  P.Handler.over(A => Count(A), Event, e => on_key(e), e => on_escape(e))
 
 def finish(r: Unit & U32) -> U32:
   (_, s) = r

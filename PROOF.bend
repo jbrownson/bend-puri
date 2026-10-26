@@ -1,47 +1,47 @@
 import Base
-import ./handler.bend as P
+import ./ask.bend as A
 import ./LAWS.bend as Laws
 
-# Helper: falling back to the empty handler gives back the answer itself.
-law fallback_empty:
-  for -M: Type -> Type
-  for -E: Data
-  for r: Maybe<M(Unit)>
-  for -e: E
-  {P.Handler.fallback(M, E, r, P.Handler.empty(M, E), e) == r : Maybe<M(Unit)>}
+# Helper: falling back to the empty base gives back the answer itself.
+law fallback_none:
+  for -X: Data
+  for -Y: Type
+  for r: Maybe<Y>
+  for -x: X
+  {A.Ask.fallback(X, Y, r, A.Ask.none(X, Y), x) == r : Maybe<Y>}
 
-def fallback_empty(M, E, r, e):
+def fallback_none(X, Y, r, x):
   match r:
-    case Some{t}:
+    case Some{y}:
       {==}
     case None{}:
       {==}
 
-# Helper: one fallback to a combined handler is two fallbacks in a row.
-law fallback_plus:
-  for -M: Type -> Type
-  for -E: Data
-  for -a: P.Handler(M, E)
-  for -b: P.Handler(M, E)
-  for r: Maybe<M(Unit)>
-  for -e: E
-  {P.Handler.fallback(M, E, r, P.Handler.plus(M, E, a, b), e) == P.Handler.fallback(M, E, P.Handler.fallback(M, E, r, b, e), a, e) : Maybe<M(Unit)>}
+# Helper: one fallback to a stacked base is two fallbacks in a row.
+law fallback_over:
+  for -X: Data
+  for -Y: Type
+  for -a: A.Ask(X, Y)
+  for -b: A.Ask(X, Y)
+  for r: Maybe<Y>
+  for -x: X
+  {A.Ask.fallback(X, Y, r, A.Ask.over(X, Y, a, b), x) == A.Ask.fallback(X, Y, A.Ask.fallback(X, Y, r, b, x), a, x) : Maybe<Y>}
 
-def fallback_plus(M, E, a, b, r, e):
+def fallback_over(X, Y, a, b, r, x):
   match r:
-    case Some{t}:
+    case Some{y}:
       {==}
     case None{}:
       {==}
 
-def Laws.plus_empty_left(M, E, h, e):
-  fallback_empty(M, E, h(e), e)
+def Laws.over_none_base(X, Y, q, x):
+  fallback_none(X, Y, q(x), x)
 
-def Laws.plus_empty_right(M, E, h, e):
+def Laws.over_none_above(X, Y, q, x):
   {==}
 
-def Laws.plus_assoc(M, E, a, b, c, e):
-  fallback_plus(M, E, a, b, c(e), e)
+def Laws.over_assoc(X, Y, a, b, c, x):
+  fallback_over(X, Y, a, b, c(x), x)
 
-def Laws.later_wins(M, E, earlier, t, e):
+def Laws.above_wins(X, Y, base, y, x):
   {==}
