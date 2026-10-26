@@ -2,18 +2,15 @@ import Base
 import ./handler.bend as Hd
 import ./frame.bend as F
 
-# The example's draw commands and colors.
+# The example's colors, named by role. A real backend would map them to RGB.
+type Color is Data:
+  Plain{}
+  Hovered{}
+  Shaded{}
+
+# The example's draw commands.
 type Paint is Data:
-  Fill{rect: F.Rect, color: U32}
-
-def cold() -> U32:
-  1
-
-def hot() -> U32:
-  2
-
-def gray() -> U32:
-  3
+  Fill{rect: F.Rect, color: Color}
 
 # This example has no actions, so any action type will do.
 def NoAction(A: Type) -> Type:
@@ -29,22 +26,22 @@ def box.claim(inside: Bool, id: U32) -> Maybe<F.Claim<U32>>:
     case False{}:
       None{}
 
-def box.color.pick(hit: Bool) -> U32:
+def box.color.pick(hit: Bool) -> Color:
   match hit:
     case True{}:
-      hot()
+      Hovered{}
     case False{}:
-      cold()
+      Plain{}
 
-def box.color(h: Maybe<&2, U32>, +id: U32) -> U32:
+def box.color(h: Maybe<&2, U32>, +id: U32) -> Color:
   match h:
     case Some{t}:
       box.color.pick(U32.is_eq(t, id))
     case None{}:
-      cold()
+      Plain{}
 
-# A box claims the pointer over its rect, and paints hot when it is the
-# hovered target.
+# A box claims the pointer over its rect, and paints itself as hovered
+# when it is the hovered target.
 def box(+r: F.Rect, +id: U32) -> Scene():
   F.Frame{
     Hd.Handler.empty(A => NoAction(A), Event),
@@ -63,7 +60,7 @@ def panel(+r: F.Rect) -> Scene():
   F.Frame{
     Hd.Handler.empty(A => NoAction(A), Event),
     p => panel.claim(F.Rect.contains(r, p)),
-    h => [Fill{r, gray()}]}
+    h => [Fill{r, Shaded{}}]}
 
 def over(base: Scene(), above: Scene()) -> Scene():
   F.Frame.over(A => NoAction(A), Event, U32, Paint, base, above)
