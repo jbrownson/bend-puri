@@ -12,11 +12,11 @@ type Model is Data:
   Model{pointer: G.Point, selected: U32}
 
 # The app's action type: a transition of the model.
-def Act(A: Type) -> Type:
-  Model -> A & Model
+def Act() -> Type:
+  Model -> Model
 
 def Scene() -> Type:
-  F.Frame<(A => Act(A)), Event, U32, R.Draw>
+  F.Frame<Act(), Event, U32, R.Draw>
 
 type Color is Data:
   Plain{}
@@ -38,10 +38,10 @@ def Color.rgb(c: Color) -> U32:
 def background() -> U32:
   2106408
 
-def select(+id: U32, m: Model) -> Unit & Model:
+def select(+id: U32, m: Model) -> Model:
   match m:
     case Model{p, s}:
-      (Unit{}, Model{p, id})
+      Model{p, id}
 
 def box.claim(inside: Bool, id: U32) -> Maybe<F.Claim<U32>>:
   match inside:
@@ -50,7 +50,7 @@ def box.claim(inside: Bool, id: U32) -> Maybe<F.Claim<U32>>:
     case False{}:
       None{}
 
-def box.click(inside: Bool, +id: U32) -> Maybe<Act(Unit)>:
+def box.click(inside: Bool, +id: U32) -> Maybe<Act()>:
   match inside:
     case True{}:
       Some{m => select(id, m)}
@@ -58,7 +58,7 @@ def box.click(inside: Bool, +id: U32) -> Maybe<Act(Unit)>:
       None{}
 
 # A box handles a press inside it by selecting itself.
-def box.on(+r: G.Rect, +id: U32, e: Event) -> Maybe<Act(Unit)>:
+def box.on(+r: G.Rect, +id: U32, e: Event) -> Maybe<Act()>:
   match e:
     case Mouse{+x, +y, _, True{}}:
       box.click(G.Rect.contains(r, G.Point{x, y}), id)
@@ -101,16 +101,16 @@ def panel.claim(inside: Bool) -> Maybe<F.Claim<U32>>:
     case False{}:
       None{}
 
-def panel.click(inside: Bool) -> Maybe<Act(Unit)>:
+def panel.click(inside: Bool) -> Maybe<Act()>:
   match inside:
     case True{}:
-      Some{m => (Unit{}, m)}
+      Some{m => m}
     case False{}:
       None{}
 
 # A press inside a panel is consumed and changes nothing, so it can't
 # reach what lies beneath.
-def panel.on(+r: G.Rect, e: Event) -> Maybe<Act(Unit)>:
+def panel.on(+r: G.Rect, e: Event) -> Maybe<Act()>:
   match e:
     case Mouse{+x, +y, _, True{}}:
       panel.click(G.Rect.contains(r, G.Point{x, y}))
@@ -126,7 +126,7 @@ def panel(+r: G.Rect) -> Scene():
     h => [R.FillRect{r, Color.rgb(Shaded{})}]}
 
 def over(base: Scene(), above: Scene()) -> Scene():
-  F.Frame.over(A => Act(A), Event, U32, R.Draw, base, above)
+  F.Frame.over(Act(), Event, U32, R.Draw, base, above)
 
 # The whole UI, built fresh from the model.
 def scene(+selected: U32) -> Scene():
@@ -141,14 +141,10 @@ def Model.selected(m: Model) -> U32:
     case Model{p, s}:
       s
 
-def second(r: Unit & Model) -> Model:
-  (_, m) = r
-  m
-
-def apply(r: Maybe<Act(Unit)>, m: Model) -> Model:
+def apply(r: Maybe<Act()>, m: Model) -> Model:
   match r:
     case Some{t}:
-      second(t(m))
+      t(m)
     case None{}:
       m
 
@@ -159,7 +155,7 @@ def handle(e: Event, +m: Model) -> Model:
     case Move{+x, +y}:
       Model{G.Point{x, y}, Model.selected(m)}
     case _:
-      apply(F.Frame.handler(A => Act(A), Event, U32, R.Draw, scene(Model.selected(m)))(e), m)
+      apply(F.Frame.handler(Act(), Event, U32, R.Draw, scene(Model.selected(m)))(e), m)
 
 def tick.go(events: List<Event>, +m: Model) -> Maybe<Model>:
   match events:
@@ -178,13 +174,13 @@ def Model.pointer(m: Model) -> G.Point:
     case Model{p, s}:
       p
 
-def painting(r: Hd.Handler(A => Act(A), Event) & List<&2, R.Draw>) -> List<&2, R.Draw>:
+def painting(r: Hd.Handler(Act(), Event) & List<&2, R.Draw>) -> List<&2, R.Draw>:
   (_, paint) = r
   paint
 
 # Present the scene at the pointer, then rasterize its painting.
 def view(+m: Model) -> Model & Image:
-  +cmds = painting(F.Frame.present(A => Act(A), Event, U32, R.Draw, scene(Model.selected(m)), Model.pointer(m)))
+  +cmds = painting(F.Frame.present(Act(), Event, U32, R.Draw, scene(Model.selected(m)), Model.pointer(m)))
   (m, R.Raster.image(9n, cmds, background()))
 
 def initial() -> Model:

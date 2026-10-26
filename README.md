@@ -13,8 +13,8 @@ with laws checked by Bend's prover.
   `Ask.over(base, above)` stacks two. Event handling and hover both work
   this way.
 - `handler.bend`: transient event handlers, an `Ask` from events to actions.
-  The action type `M` is chosen by the caller, as in the Haskell prototype's
-  `actionM`.
+  The caller chooses the action type: a state transition, an effectful
+  command, or anything else.
 - `geom.bend`: points and rectangles.
 - `frame.bend`: what one placement produces: a handler, a hover probe, and
   deferred ink. `Frame.present` runs a frame's phases in order: it resolves

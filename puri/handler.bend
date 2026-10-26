@@ -2,15 +2,15 @@ import Base
 import ./ask.bend as A
 
 # A handler looks at an event and either declines (None) or answers
-# with an action to run (Some). M is the action type chosen by the
+# with an action to run (Some). Act is the action type chosen by the
 # caller, such as a state transition or an effectful command. The
 # handler decides from the event alone, so declining cannot act.
-def Handler(-M: Type -> Type, -E: Data) -> Type:
-  A.Ask(E, M(Unit))
+def Handler(-Act: Type, -E: Data) -> Type:
+  A.Ask(E, Act)
 
-def Handler.empty(-M: Type -> Type, -E: Data) -> Handler(M, E):
-  A.Ask.none(E, M(Unit))
+def Handler.empty(-Act: Type, -E: Data) -> Handler(Act, E):
+  A.Ask.none(E, Act)
 
 # Stack `above` on `base`: the later handler is asked first.
-def Handler.over(-M: Type -> Type, -E: Data, base: Handler(M, E), above: Handler(M, E)) -> Handler(M, E):
-  A.Ask.over(E, M(Unit), base, above)
+def Handler.over(-Act: Type, -E: Data, base: Handler(Act, E), above: Handler(Act, E)) -> Handler(Act, E):
+  A.Ask.over(E, Act, base, above)
