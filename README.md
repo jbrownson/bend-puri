@@ -36,11 +36,18 @@ with laws checked by Bend's prover.
 bend PROOF.bend      # ALL PROOFS CHECK when every law holds
 bend counter.bend    # runs the handler example
 bend hover.bend      # runs the hover example
-bend app.bend        # opens the interactive window
 bend app_test.bend   # replays events through the app headlessly
 ```
 
-A window needs macOS, or Linux with X11. For a native build that runs
-on all CPU cores: `bend app.bend -o app && ./app`.
+Windows only open from a native build; `bend app.bend` alone runs on
+Bend's JS path, which has no window. To open the interactive window:
+
+```sh
+bend app.bend -o app && ./app
+```
+
+On Linux this needs clang and the X11 headers (`clang libx11-dev` on
+Debian/Ubuntu), run from a desktop session so `$DISPLAY` is set. On
+macOS it needs clang from the Xcode command line tools.
 
 Tested with Bend 2.0.39.
