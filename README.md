@@ -19,8 +19,8 @@ with laws checked by Bend's prover.
 - `frame.bend`: what one placement produces: a handler, a hover probe, and
   deferred ink. `Frame.present` runs a frame's phases in order: it resolves
   hover from the settled probes, then paints with that answer.
-- `LAWS.bend`: the claims the library must satisfy. They are stated about
-  `Ask`, so they hold for handlers and hover probes alike.
+- `LAWS.bend`: what the library promises. The laws say what each operation
+  returns, case by case, so reading them is enough to know what it does.
 - `PROOF.bend`: their proofs.
 
 `raster/raster.bend`: a pure-Bend backend that turns fill commands into the

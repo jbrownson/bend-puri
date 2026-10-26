@@ -141,6 +141,13 @@ def Model.selected(m: Model) -> U32:
     case Model{p, s}:
       s
 
+# Just the scene's handler, for routing an event. The probe and the ink
+# are dropped without running.
+def Scene.handler(f: Scene()) -> Hd.Handler(Act(), Event):
+  match f:
+    case F.Frame{handler, probe, ink}:
+      handler
+
 def apply(r: Maybe<Act()>, m: Model) -> Model:
   match r:
     case Some{t}:
@@ -155,7 +162,7 @@ def handle(e: Event, +m: Model) -> Model:
     case Move{+x, +y}:
       Model{G.Point{x, y}, Model.selected(m)}
     case _:
-      apply(F.Frame.handler(Act(), Event, U32, R.Draw, scene(Model.selected(m)))(e), m)
+      apply(Scene.handler(scene(Model.selected(m)))(e), m)
 
 def tick.go(events: List<Event>, +m: Model) -> Maybe<Model>:
   match events:

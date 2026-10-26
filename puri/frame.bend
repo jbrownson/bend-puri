@@ -19,20 +19,17 @@ def Probe(-H: Data) -> Type:
 def Ink(-H: Data, -C: Data) -> Type:
   Maybe<&2, H> -> List<&2, C>
 
-# Paint the base, then paint above it.
-def Ink.over(-H: Data, -C: Data, base: Ink(H, C), above: Ink(H, C)) -> Ink(H, C):
-  +h => List.append(&2, C, base(h), above(h))
-
 # What one placement produces: how it handles events, what it claims under
 # the pointer, and how it paints once hover is known.
 type Frame<-Act: Type, -E: Data, -H: Data, -C: Data> is Type:
   Frame{handler: Hd.Handler(Act, E), probe: Probe(H), ink: Ink(H, C)}
 
-# Stack `above` on `base`: placed later, painted on top, asked first.
+# Stack `above` on `base`: placed later, asked first, and painted on top.
+# Both inks get the same hover.
 def Frame.over(-Act: Type, -E: Data, -H: Data, -C: Data, base: Frame<Act, E, H, C>, above: Frame<Act, E, H, C>) -> Frame<Act, E, H, C>:
   match base above:
     case Frame{bh, bp, bi} Frame{ah, ap, ai}:
-      Frame{Hd.Handler.over(Act, E, bh, ah), A.Ask.over(G.Point, Claim<H>, bp, ap), Ink.over(H, C, bi, ai)}
+      Frame{Hd.Handler.over(Act, E, bh, ah), A.Ask.over(G.Point, Claim<H>, bp, ap), +h => List.append(&2, C, bi(h), ai(h))}
 
 # The hovered target: an occluder, or no claim at all, hovers nothing.
 def Claim.target(-H: Data, c: Maybe<Claim<H>>) -> Maybe<&2, H>:
@@ -49,10 +46,3 @@ def Frame.present(-Act: Type, -E: Data, -H: Data, -C: Data, f: Frame<Act, E, H, 
   match f:
     case Frame{handler, probe, ink}:
       (handler, ink(Claim.target(H, probe(pointer))))
-
-# Just the handler, for routing an event. The probe and the ink are
-# dropped without running.
-def Frame.handler(-Act: Type, -E: Data, -H: Data, -C: Data, f: Frame<Act, E, H, C>) -> Hd.Handler(Act, E):
-  match f:
-    case Frame{handler, probe, ink}:
-      handler
