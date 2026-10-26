@@ -69,13 +69,13 @@ def over(base: Scene(), above: Scene()) -> Scene():
 def scene() -> Scene():
   over(over(box(F.Rect{0, 0, 100, 100}, 1), box(F.Rect{50, 50, 100, 100}, 2)), panel(F.Rect{0, 0, 40, 40}))
 
-def painting(r: Hd.Handler(A => NoAction(A), Event) & List<Paint>) -> List<Paint>:
+def painting(r: Hd.Handler(A => NoAction(A), Event) & List<&2, Paint>) -> List<&2, Paint>:
   (_, paint) = r
   paint
 
-def paint_at(p: F.Point) -> List<Paint>:
+def paint_at(p: F.Point) -> List<&2, Paint>:
   painting(F.Frame.present(A => NoAction(A), Event, U32, Paint, scene(), p))
 
 # Pointer in the overlap, on box 1 alone, and under the panel.
-def main() -> List<List<Paint>>:
+def main() -> List<List<&2, Paint>>:
   [paint_at(F.Point{75, 75}), paint_at(F.Point{60, 20}), paint_at(F.Point{20, 20})]
