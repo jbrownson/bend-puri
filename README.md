@@ -7,11 +7,13 @@ with laws checked by Bend's prover.
 ## Files
 
 - `handler.bend`: transient event handlers. A handler looks at an event and
-  either declines or answers with a transition to apply to the state.
-  `Handler.plus` combines two handlers; the later one has priority.
+  either declines or answers with an action of a caller-chosen type `M`,
+  as in the Haskell prototype's `actionM`. `Handler.plus` combines two
+  handlers; the later one has priority.
 - `LAWS.bend`: the claims the code must satisfy.
 - `PROOF.bend`: their proofs.
-- `counter.bend`: a small example combining two handlers.
+- `counter.bend`: a small example combining two handlers, with a state
+  transition as its action type.
 
 ## Running
 

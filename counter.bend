@@ -1,30 +1,38 @@
 import Base
 import ./handler.bend as P
 
+# The app's action type: read the counter, produce a result and a new counter.
+def Count(A: Type) -> Type:
+  U32 -> A & U32
+
 # Any key press counts up.
-def on_key(e: Event) -> Maybe<(U32 -> U32)>:
+def on_key(e: Event) -> Maybe<Count(Unit)>:
   match e:
     case Key{_, True{}}:
-      Some{n => (n + 1 : U32)}
+      Some{n => (Unit{}, (n + 1 : U32))}
     case _:
       None{}
 
 # Escape (key 27) resets the counter.
-def on_escape(e: Event) -> Maybe<(U32 -> U32)>:
+def on_escape(e: Event) -> Maybe<Count(Unit)>:
   match e:
     case Key{27, True{}}:
-      Some{n => 0}
+      Some{n => (Unit{}, 0)}
     case _:
       None{}
 
 # on_escape is added later, so it wins when both answer.
-def handlers() -> P.Handler(U32, Event):
-  P.Handler.plus(U32, Event, e => on_key(e), e => on_escape(e))
+def handlers() -> P.Handler(A => Count(A), Event):
+  P.Handler.plus(A => Count(A), Event, e => on_key(e), e => on_escape(e))
 
-def apply(r: Maybe<(U32 -> U32)>, s: U32) -> U32:
+def finish(r: Unit & U32) -> U32:
+  (_, s) = r
+  s
+
+def apply(r: Maybe<Count(Unit)>, s: U32) -> U32:
   match r:
     case Some{t}:
-      t(s)
+      finish(t(s))
     case None{}:
       s
 

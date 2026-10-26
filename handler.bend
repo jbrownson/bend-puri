@@ -1,18 +1,19 @@
 import Base
 
 # A handler looks at an event and either declines (None) or answers
-# with a transition to apply to the state (Some). It never sees the
-# state while deciding, so a declined event cannot change it.
-def Handler(-S: Type, -E: Data) -> Type:
-  E -> Maybe<(S -> S)>
+# with an action to run (Some). M is the action type chosen by the
+# caller, such as a state transition or an effectful command. The
+# handler decides from the event alone, so declining cannot act.
+def Handler(-M: Type -> Type, -E: Data) -> Type:
+  E -> Maybe<M(Unit)>
 
 # The handler that declines everything.
-def Handler.empty(-S: Type, -E: Data) -> Handler(S, E):
+def Handler.empty(-M: Type -> Type, -E: Data) -> Handler(M, E):
   e => None{}
 
 # The answer of a combined handler: the later handler's answer wins,
 # and only a decline falls through to the earlier handler.
-def Handler.fallback(-S: Type, -E: Data, r: Maybe<(S -> S)>, earlier: Handler(S, E), e: E) -> Maybe<(S -> S)>:
+def Handler.fallback(-M: Type -> Type, -E: Data, r: Maybe<M(Unit)>, earlier: Handler(M, E), e: E) -> Maybe<M(Unit)>:
   match r:
     case Some{t}:
       Some{t}
@@ -20,5 +21,5 @@ def Handler.fallback(-S: Type, -E: Data, r: Maybe<(S -> S)>, earlier: Handler(S,
       earlier(e)
 
 # Combine two handlers; the later one has priority.
-def Handler.plus(-S: Type, -E: Data, earlier: Handler(S, E), later: Handler(S, E)) -> Handler(S, E):
-  +e => Handler.fallback(S, E, later(e), earlier, e)
+def Handler.plus(-M: Type -> Type, -E: Data, earlier: Handler(M, E), later: Handler(M, E)) -> Handler(M, E):
+  +e => Handler.fallback(M, E, later(e), earlier, e)
