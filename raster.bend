@@ -23,27 +23,44 @@ def covers(r: F.Rect, +x0: U32, +y0: U32, +s: U32) -> Bool:
     case F.Rect{+x, +y, +w, +h}:
       ((x <= x0) && (x0 + s <= x + w) && (y <= y0) && (y0 + s <= y + h) : U32)
 
-def Cell.pick(meet: Bool, cover: Bool, rgb: U32, acc: Cell) -> Cell:
-  match meet cover:
-    case False{} _:
-      acc
-    case True{} True{}:
+def Cell.covering(cover: Bool, rgb: U32) -> Cell:
+  match cover:
+    case True{}:
       Flat{rgb}
-    case True{} False{}:
+    case False{}:
       Mixed{}
 
-# Paint the commands over a cell in order, back to front: the last command
-# that reaches the cell decides whether it stays one color.
-def Cell.scan(+cmds: +List<Draw>, +x0: U32, +y0: U32, +s: U32, acc: Cell) -> Cell:
+# A cell's look, from its commands listed top first: no command means the
+# background; otherwise the top one decides, by covering the cell or not.
+def Cell.of(+kept: +List<Draw>, +x0: U32, +y0: U32, +s: U32, +bg: U32) -> Cell:
+  match kept:
+    case Nil{}:
+      Flat{bg}
+    case Con{FillRect{+r, rgb}, rest}:
+      Cell.covering(covers(r, x0, y0, s), rgb)
+
+def keep.pick(meet: Bool, cover: Bool, +c: Draw, below: +List<Draw>) -> +List<Draw>:
+  match meet cover:
+    case False{} _:
+      below
+    case True{} True{}:
+      [c]
+    case True{} False{}:
+      c <> below
+
+# The commands that reach a cell, top first. A command that covers the
+# whole cell hides everything beneath it, so the list stops there.
+def keep(+cmds: +List<Draw>, +x0: U32, +y0: U32, +s: U32) -> +List<Draw>:
   match cmds:
     case Nil{}:
-      acc
-    case Con{FillRect{+r, rgb}, rest}:
-      Cell.scan(rest, x0, y0, s, Cell.pick(meets(r, x0, y0, s), covers(r, x0, y0, s), rgb, acc))
+      Nil{}
+    case Con{FillRect{+r, +rgb}, rest}:
+      keep.pick(meets(r, x0, y0, s), covers(r, x0, y0, s), FillRect{r, rgb}, keep(rest, x0, y0, s))
 
-# The quadtree for a square of side 2^d at (x0, y0). A uniform cell is one
-# Pix; a cell with an edge splits into four, down to single pixels.
-def raster(+d: Nat, cell: Cell, +x0: U32, +y0: U32, +cmds: +List<Draw>, +bg: U32) -> Image:
+# The quadtree for a square of side 2^d at (x0, y0), given the commands
+# that reach it. A uniform cell is one Pix; a cell with an edge splits
+# into four, each keeping only the commands that reach it.
+def raster(+d: Nat, cell: Cell, +kept: +List<Draw>, +x0: U32, +y0: U32, +bg: U32) -> Image:
   match d cell:
     case 0n Flat{rgb}:
       Pix{rgb}
@@ -52,16 +69,22 @@ def raster(+d: Nat, cell: Cell, +x0: U32, +y0: U32, +cmds: +List<Draw>, +bg: U32
     case 1n+e Flat{rgb}:
       Pix{rgb}
     case 1n+e Mixed{}:
-      +h = U32.shln(1, e)
-      +x1 = (x0 + h : U32)
-      +y1 = (y0 + h : U32)
       +s = U32.shln(1, e)
-      tl tr bl br = raster(e, Cell.scan(cmds, x0, y0, s, Flat{bg}), x0, y0, cmds, bg)
-        raster(e, Cell.scan(cmds, x1, y0, s, Flat{bg}), x1, y0, cmds, bg)
-        raster(e, Cell.scan(cmds, x0, y1, s, Flat{bg}), x0, y1, cmds, bg)
-        raster(e, Cell.scan(cmds, x1, y1, s, Flat{bg}), x1, y1, cmds, bg)
+      +x1 = (x0 + s : U32)
+      +y1 = (y0 + s : U32)
+      +k0 = keep(kept, x0, y0, s)
+      +k1 = keep(kept, x1, y0, s)
+      +k2 = keep(kept, x0, y1, s)
+      +k3 = keep(kept, x1, y1, s)
+      tl tr bl br = raster(e, Cell.of(k0, x0, y0, s, bg), k0, x0, y0, bg)
+        raster(e, Cell.of(k1, x1, y0, s, bg), k1, x1, y0, bg)
+        raster(e, Cell.of(k2, x0, y1, s, bg), k2, x0, y1, bg)
+        raster(e, Cell.of(k3, x1, y1, s, bg), k3, x1, y1, bg)
       Qua{tl, tr, bl, br}
 
-# A whole window: the root square of side 2^d over a background color.
-def Raster.image(+d: Nat, +cmds: +List<Draw>, +bg: U32) -> Image:
-  raster(d, Cell.scan(cmds, 0, 0, U32.shln(1, d), Flat{bg}), 0, 0, cmds, bg)
+# A whole window: the root square of side 2^d over a background color,
+# from commands in painting order (back to front).
+def Raster.image(+d: Nat, cmds: +List<Draw>, +bg: U32) -> Image:
+  +s = U32.shln(1, d)
+  +top = keep(List.reverse(&2, Draw, cmds), 0, 0, s)
+  raster(d, Cell.of(top, 0, 0, s, bg), top, 0, 0, bg)
