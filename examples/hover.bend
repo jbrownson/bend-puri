@@ -1,6 +1,7 @@
 import Base
-import ./handler.bend as Hd
-import ./frame.bend as F
+import ../puri/handler.bend as Hd
+import ../puri/geom.bend as G
+import ../puri/frame.bend as F
 
 # The example's colors, named by role. A real backend would map them to RGB.
 type Color is Data:
@@ -10,7 +11,7 @@ type Color is Data:
 
 # The example's draw commands.
 type Paint is Data:
-  Fill{rect: F.Rect, color: Color}
+  Fill{rect: G.Rect, color: Color}
 
 # This example has no actions, so any action type will do.
 def NoAction(A: Type) -> Type:
@@ -42,10 +43,10 @@ def box.color(h: Maybe<&2, U32>, +id: U32) -> Color:
 
 # A box claims the pointer over its rect, and paints itself as hovered
 # when it is the hovered target.
-def box(+r: F.Rect, +id: U32) -> Scene():
+def box(+r: G.Rect, +id: U32) -> Scene():
   F.Frame{
     Hd.Handler.empty(A => NoAction(A), Event),
-    p => box.claim(F.Rect.contains(r, p), id),
+    p => box.claim(G.Rect.contains(r, p), id),
     h => [Fill{r, box.color(h, id)}]}
 
 def panel.claim(inside: Bool) -> Maybe<F.Claim<U32>>:
@@ -56,10 +57,10 @@ def panel.claim(inside: Bool) -> Maybe<F.Claim<U32>>:
       None{}
 
 # A panel names no target, but covers what lies beneath it.
-def panel(+r: F.Rect) -> Scene():
+def panel(+r: G.Rect) -> Scene():
   F.Frame{
     Hd.Handler.empty(A => NoAction(A), Event),
-    p => panel.claim(F.Rect.contains(r, p)),
+    p => panel.claim(G.Rect.contains(r, p)),
     h => [Fill{r, Shaded{}}]}
 
 def over(base: Scene(), above: Scene()) -> Scene():
@@ -67,15 +68,15 @@ def over(base: Scene(), above: Scene()) -> Scene():
 
 # Box 1, box 2 overlapping it, and a panel over box 1's top-left corner.
 def scene() -> Scene():
-  over(over(box(F.Rect{0, 0, 100, 100}, 1), box(F.Rect{50, 50, 100, 100}, 2)), panel(F.Rect{0, 0, 40, 40}))
+  over(over(box(G.Rect{0, 0, 100, 100}, 1), box(G.Rect{50, 50, 100, 100}, 2)), panel(G.Rect{0, 0, 40, 40}))
 
 def painting(r: Hd.Handler(A => NoAction(A), Event) & List<&2, Paint>) -> List<&2, Paint>:
   (_, paint) = r
   paint
 
-def paint_at(p: F.Point) -> List<&2, Paint>:
+def paint_at(p: G.Point) -> List<&2, Paint>:
   painting(F.Frame.present(A => NoAction(A), Event, U32, Paint, scene(), p))
 
 # Pointer in the overlap, on box 1 alone, and under the panel.
 def main() -> List<List<&2, Paint>>:
-  [paint_at(F.Point{75, 75}), paint_at(F.Point{60, 20}), paint_at(F.Point{20, 20})]
+  [paint_at(G.Point{75, 75}), paint_at(G.Point{60, 20}), paint_at(G.Point{20, 20})]

@@ -1,15 +1,15 @@
 import Base
-import ./ask.bend as A
-import ./handler.bend as Hd
-import ./frame.bend as F
-import ./raster.bend as R
+import ../puri/handler.bend as Hd
+import ../puri/geom.bend as G
+import ../puri/frame.bend as F
+import ../raster/raster.bend as R
 
 # Boxes you can hover and click. Run with: bend app.bend
 
 # The app's state: where the pointer rests, and which box is selected
 # (0 for none). Puri keeps nothing; all of it lives here.
 type Model is Data:
-  Model{pointer: F.Point, selected: U32}
+  Model{pointer: G.Point, selected: U32}
 
 # The app's action type: a transition of the model.
 def Act(A: Type) -> Type:
@@ -58,10 +58,10 @@ def box.click(inside: Bool, +id: U32) -> Maybe<Act(Unit)>:
       None{}
 
 # A box handles a press inside it by selecting itself.
-def box.on(+r: F.Rect, +id: U32, e: Event) -> Maybe<Act(Unit)>:
+def box.on(+r: G.Rect, +id: U32, e: Event) -> Maybe<Act(Unit)>:
   match e:
     case Mouse{+x, +y, _, True{}}:
-      box.click(F.Rect.contains(r, F.Point{x, y}), id)
+      box.click(G.Rect.contains(r, G.Point{x, y}), id)
     case _:
       None{}
 
@@ -88,10 +88,10 @@ def box.color(is_selected: Bool, h: Maybe<&2, U32>, +id: U32) -> Color:
 
 # A box: selects itself when pressed, claims the pointer over its rect,
 # and paints itself by whether it is selected or hovered.
-def box(+r: F.Rect, +id: U32, +selected: U32) -> Scene():
+def box(+r: G.Rect, +id: U32, +selected: U32) -> Scene():
   F.Frame{
     e => box.on(r, id, e),
-    p => box.claim(F.Rect.contains(r, p), id),
+    p => box.claim(G.Rect.contains(r, p), id),
     h => [R.FillRect{r, Color.rgb(box.color(U32.is_eq(selected, id), h, id))}]}
 
 def panel.claim(inside: Bool) -> Maybe<F.Claim<U32>>:
@@ -110,19 +110,19 @@ def panel.click(inside: Bool) -> Maybe<Act(Unit)>:
 
 # A press inside a panel is consumed and changes nothing, so it can't
 # reach what lies beneath.
-def panel.on(+r: F.Rect, e: Event) -> Maybe<Act(Unit)>:
+def panel.on(+r: G.Rect, e: Event) -> Maybe<Act(Unit)>:
   match e:
     case Mouse{+x, +y, _, True{}}:
-      panel.click(F.Rect.contains(r, F.Point{x, y}))
+      panel.click(G.Rect.contains(r, G.Point{x, y}))
     case _:
       None{}
 
 # A panel names no target, but covers what lies beneath it, for hover and
 # for presses alike.
-def panel(+r: F.Rect) -> Scene():
+def panel(+r: G.Rect) -> Scene():
   F.Frame{
     e => panel.on(r, e),
-    p => panel.claim(F.Rect.contains(r, p)),
+    p => panel.claim(G.Rect.contains(r, p)),
     h => [R.FillRect{r, Color.rgb(Shaded{})}]}
 
 def over(base: Scene(), above: Scene()) -> Scene():
@@ -131,10 +131,10 @@ def over(base: Scene(), above: Scene()) -> Scene():
 # The whole UI, built fresh from the model.
 def scene(+selected: U32) -> Scene():
   over(over(over(
-    box(F.Rect{60, 60, 200, 160}, 1, selected),
-    box(F.Rect{180, 140, 220, 160}, 2, selected)),
-    box(F.Rect{300, 40, 120, 80}, 3, selected)),
-    panel(F.Rect{30, 170, 120, 120}))
+    box(G.Rect{60, 60, 200, 160}, 1, selected),
+    box(G.Rect{180, 140, 220, 160}, 2, selected)),
+    box(G.Rect{300, 40, 120, 80}, 3, selected)),
+    panel(G.Rect{30, 170, 120, 120}))
 
 def Model.selected(m: Model) -> U32:
   match m:
@@ -157,7 +157,7 @@ def apply(r: Maybe<Act(Unit)>, m: Model) -> Model:
 def handle(e: Event, +m: Model) -> Model:
   match e:
     case Move{+x, +y}:
-      Model{F.Point{x, y}, Model.selected(m)}
+      Model{G.Point{x, y}, Model.selected(m)}
     case _:
       apply(F.Frame.handler(A => Act(A), Event, U32, R.Draw, scene(Model.selected(m)))(e), m)
 
@@ -173,7 +173,7 @@ def tick.go(events: List<Event>, +m: Model) -> Maybe<Model>:
 def tick(events: List<Event>, m: Model) -> IO(Maybe<Model>):
   IO.pure(Maybe<Model>, tick.go(events, m))
 
-def Model.pointer(m: Model) -> F.Point:
+def Model.pointer(m: Model) -> G.Point:
   match m:
     case Model{p, s}:
       p
@@ -188,7 +188,7 @@ def view(+m: Model) -> Model & Image:
   (m, R.Raster.image(9n, cmds, background()))
 
 def initial() -> Model:
-  Model{F.Point{0, 0}, 0}
+  Model{G.Point{0, 0}, 0}
 
 def main() -> IO(Unit):
   App.run(~Model, ~App{+m => view(m), tick}, "Puri boxes", 480, 360, initial())

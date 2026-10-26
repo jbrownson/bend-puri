@@ -1,19 +1,7 @@
 import Base
 import ./ask.bend as A
 import ./handler.bend as Hd
-
-type Point is Data:
-  Point{x: U32, y: U32}
-
-type Rect is Data:
-  Rect{x: U32, y: U32, w: U32, h: U32}
-
-def Rect.contains(r: Rect, p: Point) -> Bool:
-  match r p:
-    case Rect{+x, +y, +w, +h} Point{+px, +py}:
-      Bool.and(
-        Bool.and(U32.is_le(x, px), U32.is_lt(px, (x + w : U32))),
-        Bool.and(U32.is_le(y, py), U32.is_lt(py, (y + h : U32))))
+import ./geom.bend as G
 
 # What the pointer rests on, as one placement answers: a hover target, or
 # an occluder that covers what lies beneath without naming a target.
@@ -23,7 +11,7 @@ type Claim<-H: Data> is Data:
 
 # A placement's hover answer, asked like a handler: top placement first.
 def Probe(-H: Data) -> Type:
-  A.Ask(Point, Claim<H>)
+  A.Ask(G.Point, Claim<H>)
 
 # Deferred painting: given the resolved hover, produce draw commands C.
 # Commands are plain data, so a backend can read the list as often as
@@ -44,7 +32,7 @@ type Frame<-M: Type -> Type, -E: Data, -H: Data, -C: Data> is Type:
 def Frame.over(-M: Type -> Type, -E: Data, -H: Data, -C: Data, base: Frame<M, E, H, C>, above: Frame<M, E, H, C>) -> Frame<M, E, H, C>:
   match base above:
     case Frame{bh, bp, bi} Frame{ah, ap, ai}:
-      Frame{Hd.Handler.over(M, E, bh, ah), A.Ask.over(Point, Claim<H>, bp, ap), Ink.over(H, C, bi, ai)}
+      Frame{Hd.Handler.over(M, E, bh, ah), A.Ask.over(G.Point, Claim<H>, bp, ap), Ink.over(H, C, bi, ai)}
 
 # The hovered target: an occluder, or no claim at all, hovers nothing.
 def Claim.target(-H: Data, c: Maybe<Claim<H>>) -> Maybe<&2, H>:
@@ -57,7 +45,7 @@ def Claim.target(-H: Data, c: Maybe<Claim<H>>) -> Maybe<&2, H>:
 # A frame's phases, in order: resolve hover from the settled probes, then
 # run the deferred ink with that answer. Returns the handler for the next
 # event alongside the painting.
-def Frame.present(-M: Type -> Type, -E: Data, -H: Data, -C: Data, f: Frame<M, E, H, C>, pointer: Point) -> Hd.Handler(M, E) & List<&2, C>:
+def Frame.present(-M: Type -> Type, -E: Data, -H: Data, -C: Data, f: Frame<M, E, H, C>, pointer: G.Point) -> Hd.Handler(M, E) & List<&2, C>:
   match f:
     case Frame{handler, probe, ink}:
       (handler, ink(Claim.target(H, probe(pointer))))

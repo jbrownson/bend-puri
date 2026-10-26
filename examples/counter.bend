@@ -1,5 +1,5 @@
 import Base
-import ./handler.bend as P
+import ../puri/handler.bend as P
 
 # The app's action type: read the counter, produce a result and a new counter.
 def Count(A: Type) -> Type:

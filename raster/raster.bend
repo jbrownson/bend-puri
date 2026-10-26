@@ -1,9 +1,9 @@
 import Base
-import ./frame.bend as F
+import ../puri/geom.bend as G
 
 # The backend's draw command: fill a rectangle with a 0xRRGGBB color.
 type Draw is Data:
-  FillRect{rect: F.Rect, rgb: U32}
+  FillRect{rect: G.Rect, rgb: U32}
 
 # What a square cell of the window looks like: one color throughout, or
 # an edge somewhere inside it.
@@ -12,15 +12,15 @@ type Cell is Data:
   Mixed{}
 
 # Does the rectangle overlap the square of side s at (x0, y0)?
-def meets(r: F.Rect, +x0: U32, +y0: U32, +s: U32) -> Bool:
+def meets(r: G.Rect, +x0: U32, +y0: U32, +s: U32) -> Bool:
   match r:
-    case F.Rect{+x, +y, +w, +h}:
+    case G.Rect{+x, +y, +w, +h}:
       ((x < x0 + s) && (x0 < x + w) && (y < y0 + s) && (y0 < y + h) : U32)
 
 # Does the rectangle cover that whole square?
-def covers(r: F.Rect, +x0: U32, +y0: U32, +s: U32) -> Bool:
+def covers(r: G.Rect, +x0: U32, +y0: U32, +s: U32) -> Bool:
   match r:
-    case F.Rect{+x, +y, +w, +h}:
+    case G.Rect{+x, +y, +w, +h}:
       ((x <= x0) && (x0 + s <= x + w) && (y <= y0) && (y0 + s <= y + h) : U32)
 
 def Cell.covering(cover: Bool, rgb: U32) -> Cell:
