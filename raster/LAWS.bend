@@ -3,12 +3,9 @@ import ../puri/geom.bend as G
 import ./raster.bend as R
 import ./spec.bend as S
 
-# LAW: given two geometric facts still to be proved (see spec.bend), every
-# pixel of a rasterized window is the color the spec gives it: the topmost
-# command whose rectangle contains it, or the background.
+# LAW: every pixel of a rasterized window is the color the spec gives it:
+# the topmost command whose rectangle contains it, or the background.
 law image_pixels:
-  for ~unit: S.Fact.unit()
-  for ~quarter: S.Fact.quarter()
   for +d: Nat
   for +cmds: +List<R.Draw>
   for +bg: U32

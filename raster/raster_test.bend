@@ -60,9 +60,11 @@ def boxes() -> +List<R.Draw>:
   [R.FillRect{G.Rect.of(60, 60, 200, 160), 4878245}, R.FillRect{G.Rect.of(180, 140, 220, 160), 15774761},
    R.FillRect{G.Rect.of(300, 40, 120, 80), 7317724}, R.FillRect{G.Rect.of(30, 170, 120, 120), 8421504}]
 
-# The geometric facts the raster's proof assumes, tried on every combination
-# of the values below, which include both ends of I32's range. Each fact is
-# checked one axis at a time, with the other axis set so its part holds.
+# The geometric facts the raster's proof rests on, tried on every combination
+# of the values below, which include both ends of I32's range. The proofs are
+# about Base's definitions; this runs the compiled program, whose U32
+# arithmetic is native. Each fact is checked one axis at a time, with the
+# other axis set so its part holds.
 
 def vals() -> +List<I.I32>:
   [G.int(0), G.int(1), G.int(2), G.int(3), G.int(5), G.int(7), G.int(2147483646), G.int(2147483647),

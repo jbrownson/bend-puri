@@ -57,9 +57,7 @@ def Spec.pixel(+d: Nat, img: Image, +x0: I.I32, +y0: I.I32, +p: G.Point) -> U32:
           Spec.pixel(e, Spec.quarter(right, low, tl, tr, bl, br), Spec.half(right, x0, s), Spec.half(low, y0, s), G.Point{px, py})
 
 # Geometric facts the proof of the raster rests on. Each holds for every I32
-# value, wraparound included. PROOF.bend proves Fact.meet and Fact.cover;
-# Fact.unit and Fact.quarter are still assumed, and raster_test.bend checks
-# all four on edge cases.
+# value, wraparound included, and PROOF.bend proves all four.
 
 # A rectangle that contains a point inside a square meets the square.
 def Fact.meet() -> Type:

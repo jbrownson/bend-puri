@@ -4,6 +4,7 @@ import ../puri/geom.bend as G
 import ./raster.bend as R
 import ./spec.bend as S
 import ../puri/order.bend as O
+import ../puri/arith.bend as A
 import 0xcdaf59a0332a2e0cdb289bf7a32fba62/bool.bend as B
 import ./LAWS.bend as Laws
 
@@ -149,6 +150,93 @@ def fact_cover(r, p, x0, y0, s, hv, hi):
         O.lt_le(py, (Y + S : I.I32), (y + h : I.I32),
           part4((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H),
           part4((x <= X : I.I32), (X + S <= x + w : I.I32), (y <= Y : I.I32), (Y + S <= y + h : I.I32), V)))
+
+# Helper: a cell twice the side is two cells side by side.
+law side_double:
+  for +e: Nat
+  {R.side(1n+e) == (R.side(e) + R.side(e) : I.I32) : I.I32}
+
+def side_double(e):
+  Equal.cong(U32, I.I32, v => I.I32{v}, U32.shl(U32.shln(1, e)), U32.add(U32.shln(1, e), U32.shln(1, e)), A.shl_add(U32.shln(1, e)))
+
+# Helper, one axis of Fact.quarter: the quarter starts at or before the point.
+law axis_lo:
+  for +x0: I.I32
+  for +px: I.I32
+  for +e: Nat
+  for right: Bool
+  for er: {(x0 + R.side(e) <= px : I.I32) == right : Bool}
+  for lo: {(x0 <= px : I.I32) == True{} : Bool}
+  {(S.Spec.half(right, x0, R.side(e)) <= px : I.I32) == True{} : Bool}
+
+def axis_lo(x0, px, e, right, er, lo):
+  match right:
+    case True{}:
+      er
+    case False{}:
+      lo
+
+# Helper, one axis of Fact.quarter: the quarter ends after the point. In the
+# far half, (x0 + s) + s is x0 + 2s, the parent's end.
+law axis_hi:
+  for +x0: I.I32
+  for +px: I.I32
+  for +e: Nat
+  for right: Bool
+  for er: {(x0 + R.side(e) <= px : I.I32) == right : Bool}
+  for hi: {(px < x0 + R.side(1n+e) : I.I32) == True{} : Bool}
+  {(px < S.Spec.half(right, x0, R.side(e)) + R.side(e) : I.I32) == True{} : Bool}
+
+def axis_hi(x0, px, e, right, er, hi):
+  match right:
+    case True{}:
+      %Equal.sym(I.I32, ((x0 + R.side(e)) + R.side(e) : I.I32), (x0 + (R.side(e) + R.side(e)) : I.I32), A.i32_assoc(x0, R.side(e), R.side(e))) : {I.I32.is_lt(px, _) == True{} : Bool}
+      %side_double(e) : {I.I32.is_lt(px, I.I32.add(x0, _)) == True{} : Bool}
+      hi
+    case False{}:
+      O.not_le((x0 + R.side(e) : I.I32), px, er)
+
+# Fact.quarter, proved: a point inside a square of side 2^(e+1) is inside
+# the quarter Spec.pixel descends into.
+law fact_quarter:
+  for x0: I.I32
+  for y0: I.I32
+  for e: Nat
+  for px: I.I32
+  for py: I.I32
+  for hp: {G.Rect.contains(G.Rect{x0, y0, R.side(1n+e), R.side(1n+e)}, G.Point{px, py}) == True{} : Bool}
+  {G.Rect.contains(G.Rect{S.Spec.half((x0 + R.side(e) <= px : I.I32), x0, R.side(e)), S.Spec.half((y0 + R.side(e) <= py : I.I32), y0, R.side(e)), R.side(e), R.side(e)}, G.Point{px, py}) == True{} : Bool}
+
+def fact_quarter(x0, y0, e, px, py, hp):
+  +X = x0
+  +Y = y0
+  +E = e
+  +PX = px
+  +PY = py
+  +H = hp
+  all4((S.Spec.half((X + R.side(E) <= PX : I.I32), X, R.side(E)) <= PX : I.I32), (PX < S.Spec.half((X + R.side(E) <= PX : I.I32), X, R.side(E)) + R.side(E) : I.I32), (S.Spec.half((Y + R.side(E) <= PY : I.I32), Y, R.side(E)) <= PY : I.I32), (PY < S.Spec.half((Y + R.side(E) <= PY : I.I32), Y, R.side(E)) + R.side(E) : I.I32),
+    axis_lo(X, PX, E, (X + R.side(E) <= PX : I.I32), {==}, part1((X <= PX : I.I32), (PX < X + R.side(1n+E) : I.I32), (Y <= PY : I.I32), (PY < Y + R.side(1n+E) : I.I32), H)),
+    axis_hi(X, PX, E, (X + R.side(E) <= PX : I.I32), {==}, part2((X <= PX : I.I32), (PX < X + R.side(1n+E) : I.I32), (Y <= PY : I.I32), (PY < Y + R.side(1n+E) : I.I32), H)),
+    axis_lo(Y, PY, E, (Y + R.side(E) <= PY : I.I32), {==}, part3((X <= PX : I.I32), (PX < X + R.side(1n+E) : I.I32), (Y <= PY : I.I32), (PY < Y + R.side(1n+E) : I.I32), H)),
+    axis_hi(Y, PY, E, (Y + R.side(E) <= PY : I.I32), {==}, part4((X <= PX : I.I32), (PX < X + R.side(1n+E) : I.I32), (Y <= PY : I.I32), (PY < Y + R.side(1n+E) : I.I32), H)))
+
+# Fact.unit, proved: the only point inside a 1x1 square is its corner.
+law fact_unit:
+  for p: G.Point
+  for x0: I.I32
+  for y0: I.I32
+  for hp: {G.Rect.contains(G.Rect{x0, y0, R.side(0n), R.side(0n)}, p) == True{} : Bool}
+  {p == G.Point{x0, y0} : G.Point}
+
+def fact_unit(p, x0, y0, hp):
+  match p:
+    case G.Point{+px, +py}:
+      +X = x0
+      +Y = y0
+      +H = hp
+      %Equal.sym(I.I32, px, X, O.unit_axis(X, px, part1((X <= px : I.I32), (px < X + R.side(0n) : I.I32), (Y <= py : I.I32), (py < Y + R.side(0n) : I.I32), H), part2((X <= px : I.I32), (px < X + R.side(0n) : I.I32), (Y <= py : I.I32), (py < Y + R.side(0n) : I.I32), H))) : {G.Point{_, py} == G.Point{X, Y} : G.Point}
+      %Equal.sym(I.I32, py, Y, O.unit_axis(Y, py, part3((X <= px : I.I32), (px < X + R.side(0n) : I.I32), (Y <= py : I.I32), (py < Y + R.side(0n) : I.I32), H), part4((X <= px : I.I32), (px < X + R.side(0n) : I.I32), (Y <= py : I.I32), (py < Y + R.side(0n) : I.I32), H))) : {G.Point{X, _} == G.Point{X, Y} : G.Point}
+      {==}
 
 # Helper: one command's step of keep, with its three tests as parameters.
 law keep_step:
@@ -405,10 +493,10 @@ def raster_color(meet, cover, unit, quarter, d, cell, kept, x0, y0, bg, p, ec, i
             c => k => x => y => ec2 => ins => raster_color(~meet, ~cover, ~unit, ~quarter, e, c, k, x, y, bg, G.Point{px, py}, ec2, ins))
 
 # The window is the root cell, holding the commands kept for it, top first.
-def Laws.image_pixels(unit, quarter, d, cmds, bg, p, inside):
+def Laws.image_pixels(d, cmds, bg, p, inside):
   Equal.trans(U32,
     S.Spec.pixel(d, R.raster(d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg), G.int(0), G.int(0), p),
     S.Spec.color(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), p, bg),
     S.Spec.color(List.reverse(&2, R.Draw, cmds), p, bg),
-    raster_color(~fact_meet, ~fact_cover, ~unit, ~quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg, p, {==}, inside),
+    raster_color(~fact_meet, ~fact_cover, ~fact_unit, ~fact_quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg, p, {==}, inside),
     keep_color(~fact_meet, ~fact_cover, List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d), p, bg, inside))
