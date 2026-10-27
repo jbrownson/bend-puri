@@ -39,6 +39,21 @@ def Cell.of(+kept: +List<Draw>, +x0: U32, +y0: U32, +s: U32, +bg: U32) -> Cell:
     case Con{FillRect{+r, rgb}, rest}:
       Cell.covering(covers(r, x0, y0, s), rgb)
 
+def Cell.pick(hit: Bool, rgb: U32, below: U32) -> U32:
+  match hit:
+    case True{}:
+      rgb
+    case False{}:
+      below
+
+# The color of the first command that contains the point, or the background.
+def first(kept: +List<Draw>, +p: G.Point, +bg: U32) -> U32:
+  match kept:
+    case Nil{}:
+      bg
+    case Con{FillRect{+r, rgb}, rest}:
+      Cell.pick(G.Rect.contains(r, p), rgb, first(rest, p, bg))
+
 def keep.pick(meet: Bool, cover: Bool, +c: Draw, below: +List<Draw>) -> +List<Draw>:
   match meet cover:
     case False{} _:
@@ -65,7 +80,7 @@ def raster(+d: Nat, cell: Cell, +kept: +List<Draw>, +x0: U32, +y0: U32, +bg: U32
     case 0n Flat{rgb}:
       Pix{rgb}
     case 0n Mixed{}:
-      Pix{bg}
+      Pix{first(kept, G.Point{x0, y0}, bg)}
     case 1n+e Flat{rgb}:
       Pix{rgb}
     case 1n+e Mixed{}:

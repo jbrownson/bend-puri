@@ -29,10 +29,15 @@ with laws checked by Bend's prover.
   shows, splitting only where there's an edge.
 - `spec.bend`: what the raster must produce, stated the slow, obvious way:
   each pixel takes the color of the topmost command whose rectangle contains
-  it, or the background.
-- `raster_test.bend`: compares every pixel of a few scenes against the spec.
-  This is a test, not a law: a proof would need lemmas about `U32` order and
-  addition that Base doesn't have yet.
+  it, or the background. It also states four geometric facts about `U32`
+  coordinates that the proof assumes.
+- `LAWS.bend`: every pixel of a rasterized window is the spec's color, given
+  the four facts. They are template clauses, so the law reads "for any proof
+  of these facts"; Base has no lemmas about `U32` order or addition to prove
+  them from yet.
+- `PROOF.bend`: the proof.
+- `raster_test.bend`: compares every pixel of a few scenes against the spec,
+  and tries the four facts on every combination of edge-case values.
 
 `examples/`:
 
@@ -49,10 +54,11 @@ with laws checked by Bend's prover.
 
 ```sh
 bend puri/PROOF.bend          # ALL PROOFS CHECK when every law holds
+bend raster/PROOF.bend        # the raster law, given its geometric facts
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
-bend raster/raster_test.bend  # checks every pixel against the spec
+bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 
 Windows only open from a native build; `bend examples/app.bend` alone runs
