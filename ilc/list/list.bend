@@ -3,8 +3,10 @@ import ../change/change.bend as C
 
 # A list's own edits, and mapping a function over a list and over its
 # changes. Positions count from 0. DA is the elements' change type, of any
-# kind, and `pa` applies one, so an update changes an element in place. A
-# position past the end inserts at the end, and deletes or updates nothing.
+# kind, and `pa` applies one, so an update changes an element in place.
+# The laws cover changes whose positions are in range; past the end, these
+# functions still give an answer (an insert appends, a delete or an update
+# does nothing), which nothing relies on.
 
 type Edit<-A: Data, -DA: Data> is Data:
   Insert{at: Nat, x: A}
@@ -63,21 +65,21 @@ def map(~A: Data, ~B: Data, ~f: A -> B, xs: List<&2, A>) -> List<&2, B>:
     case Con{h, t}:
       f(h) <> map(~A, ~B, ~f, t)
 
-# The change to the image of the element at a position, from g's
-# derivative. Where the list has no element the update changes nothing,
-# so any change of B will do: `kb`.
-def map.at(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>, ~kb: DB,
-  m: Maybe<&2, A>, d: DA) -> DB:
+# The change an update at i makes to the mapped list, given the element
+# at i: its image, updated by g's derivative. Past the end there is no
+# element, and the update changes nothing.
+def map.at(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>,
+  i: Nat, m: Maybe<&2, A>, d: DA) -> Change(B, DB):
   match m:
     case None{}:
-      kb
+      C.Keep{}
     case Some{x}:
-      C.Inc.df(A, DA, B, DB, g)(x, d)
+      C.Edit{Update{i, C.Inc.df(A, DA, B, DB, g)(x, d)}}
 
 # map's derivative for one edit, from the list before it: an insert or a
 # delete carries over, and an update updates the same position by g's
 # derivative.
-def map.edit(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>, ~kb: DB,
+def map.edit(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>,
   xs: List<&2, A>, e: Edit<A, DA>) -> Change(B, DB):
   match e:
     case Insert{i, x}:
@@ -85,21 +87,21 @@ def map.edit(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>, 
     case Delete{i}:
       C.Edit{Delete{i}}
     case Update{+i, d}:
-      C.Edit{Update{i, map.at(~A, ~DA, ~B, ~DB, ~g, ~kb, List.get(&2, A, xs, i), d)}}
+      map.at(~A, ~DA, ~B, ~DB, ~g, i, List.get(&2, A, xs, i), d)
 
 # map's derivative: the change to the list g maps to, from the list and its
 # change, lifted from map.edit.
 def dmap(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~g: C.Inc<A, DA, B, DB>,
-  ~kb: DB, d: Change(A, DA), +xs: List<&2, A>) -> Change(B, DB):
+  d: Change(A, DA), +xs: List<&2, A>) -> Change(B, DB):
   C.lift.df(~List<&2, A>, ~Edit<A, DA>, ~List<&2, B>, ~Edit<B, DB>, ~(e => ys => edit(~A, ~DA, ~pa, e, ys)),
-    ~C.Inc{ys => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys), ys => e => map.edit(~A, ~DA, ~B, ~DB, ~g, ~kb, ys, e)},
+    ~C.Inc{ys => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys), ys => e => map.edit(~A, ~DA, ~B, ~DB, ~g, ys, e)},
     d, xs)
 
 # map, as an incremental function: g's function mapped over a list, with
 # dmap as its derivative.
-def map.inc(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~g: C.Inc<A, DA, B, DB>,
-  ~kb: DB) -> C.Inc<List<&2, A>, Change(A, DA), List<&2, B>, Change(B, DB)>:
-  C.Inc{xs => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, d, xs)}
+def map.inc(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~g: C.Inc<A, DA, B, DB>) ->
+  C.Inc<List<&2, A>, Change(A, DA), List<&2, B>, Change(B, DB)>:
+  C.Inc{xs => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, d, xs)}
 
 # An edit with its element mapped by fa and its element change by fd.
 def Edit.map(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~fa: A -> B, ~fd: DA -> DB,
