@@ -23,8 +23,16 @@ with laws checked by Bend's prover.
   returns, case by case, so reading them is enough to know what it does.
 - `PROOF.bend`: their proofs.
 
-`raster/raster.bend`: a pure-Bend backend that turns fill commands into the
-`Image` quadtree a Bend window shows, splitting only where there's an edge.
+`raster/`, the backend:
+
+- `raster.bend`: turns fill commands into the `Image` quadtree a Bend window
+  shows, splitting only where there's an edge.
+- `spec.bend`: what the raster must produce, stated the slow, obvious way:
+  each pixel takes the color of the topmost command whose rectangle contains
+  it, or the background.
+- `raster_test.bend`: compares every pixel of a few scenes against the spec.
+  This is a test, not a law: a proof would need lemmas about `U32` order and
+  addition that Base doesn't have yet.
 
 `examples/`:
 
@@ -44,6 +52,7 @@ bend puri/PROOF.bend          # ALL PROOFS CHECK when every law holds
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
+bend raster/raster_test.bend  # checks every pixel against the spec
 ```
 
 Windows only open from a native build; `bend examples/app.bend` alone runs
