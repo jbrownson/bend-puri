@@ -31,8 +31,8 @@ def apply(~A: Data, ~E: Data, ~edit: E -> A -> A, d: Change<A, E>, a: A) -> A:
 # A derivative of f, lifted from single edits. `fe` gives the change one
 # edit makes to f's result, from the value before the edit; lift gives the
 # change any change makes. A replacement replaces the result.
-def lift(~A: Data, ~E: Data, ~B: Data, ~F: Data, ~edit: E -> A -> A, ~f: A -> B,
-  ~fe: A -> E -> Change<B, F>, d: Change<A, E>, +a: A) -> Change<B, F>:
+def lift(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~ea: EA -> A -> A, ~f: A -> B,
+  ~fe: A -> EA -> Change<B, EB>, d: Change<A, EA>, +a: A) -> Change<B, EB>:
   match d:
     case Keep{}:
       Keep{}
@@ -41,13 +41,14 @@ def lift(~A: Data, ~E: Data, ~B: Data, ~F: Data, ~edit: E -> A -> A, ~f: A -> B,
     case Edit{e}:
       fe(a, e)
     case Then{+p, q}:
-      Then{lift(~A, ~E, ~B, ~F, ~edit, ~f, ~fe, p, a),
-        lift(~A, ~E, ~B, ~F, ~edit, ~f, ~fe, q, apply(~A, ~E, ~edit, p, a))}
+      Then{lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, p, a),
+        lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, q, apply(~A, ~EA, ~ea, p, a))}
 
 # The derivative that recomputes: whatever the change, replace the result.
-def recompute(~A: Data, ~E: Data, ~B: Data, ~F: Data, ~edit: E -> A -> A, ~f: A -> B,
-  a: A, d: Change<A, E>) -> Change<B, F>:
-  Replace{f(apply(~A, ~E, ~edit, d, a))}
+# The input's changes DA can be of any type, applied by `pa`.
+def recompute(~A: Data, ~DA: Data, ~B: Data, ~EB: Data, ~pa: DA -> A -> A, ~f: A -> B,
+  a: A, d: DA) -> Change<B, EB>:
+  Replace{f(pa(d, a))}
 
 # Where a change acts, with its values left out. S says where one edit
 # acts.

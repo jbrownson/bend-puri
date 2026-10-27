@@ -92,89 +92,92 @@ law then_assoc:
 # if it is correct for every single edit.
 law lift:
   for ~A: Data
-  for ~E: Data
+  for ~EA: Data
   for ~B: Data
-  for ~F: Data
-  for ~ea: E -> A -> A
-  for ~eb: F -> B -> B
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~eb: EB -> B -> B
   for ~f: A -> B
-  for ~fe: A -> E -> C.Change<B, F>
-  for ~fe_ok: (@a: A -> @e: E -> {C.apply(~B, ~F, ~eb, fe(a, e), f(a)) == f(ea(e, a)) : B})
-  for d: C.Change<A, E>
+  for ~fe: A -> EA -> C.Change<B, EB>
+  for ~fe_ok: (@a: A -> @e: EA -> {C.apply(~B, ~EB, ~eb, fe(a, e), f(a)) == f(ea(e, a)) : B})
+  for d: C.Change<A, EA>
   for +a: A
-  {C.apply(~B, ~F, ~eb, C.lift(~A, ~E, ~B, ~F, ~ea, ~f, ~fe, d, a), f(a)) == f(C.apply(~A, ~E, ~ea, d, a)) : B}
+  {C.apply(~B, ~EB, ~eb, C.lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, d, a), f(a)) == f(C.apply(~A, ~EA, ~ea, d, a)) : B}
 
-# LAW: recomputing is a correct derivative of any function.
+# LAW: recomputing is a correct derivative of any function, for changes of
+# any type DA, applied by `pa`.
 law recompute:
   for ~A: Data
-  for ~E: Data
+  for ~DA: Data
   for ~B: Data
-  for ~F: Data
-  for ~ea: E -> A -> A
-  for ~eb: F -> B -> B
+  for ~EB: Data
+  for ~pa: DA -> A -> A
+  for ~eb: EB -> B -> B
   for ~f: A -> B
   for a: A
-  for d: C.Change<A, E>
-  {C.apply(~B, ~F, ~eb, C.recompute(~A, ~E, ~B, ~F, ~ea, ~f, a, d), f(a)) == f(C.apply(~A, ~E, ~ea, d, a)) : B}
+  for d: DA
+  {C.apply(~B, ~EB, ~eb, C.recompute(~A, ~DA, ~B, ~EB, ~pa, ~f, a, d), f(a)) == f(pa(d, a)) : B}
 
 # Lists
 # -----
+# A list's elements change by any type DA, applied by `pa`: a whole value
+# changes by C.Change<A, C.Whole> and C.apply, a list by a list change.
 # List.take(xs, i) is the first i elements (all of them when i is past the
 # end), List.drop(xs, i) the rest, and List.get(xs, i) the element at i, or
-# None past the end. `ea` applies the elements' edits.
+# None past the end.
 
 # LAW: a list change is applied edit by edit.
 law patch:
   for ~A: Data
-  for ~E: Data
-  for ~ea: E -> A -> A
-  for d: C.Change<List<&2, A>, L.Edit<A, E>>
+  for ~DA: Data
+  for ~pa: DA -> A -> A
+  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
   for xs: List<&2, A>
-  {L.patch(~A, ~E, ~ea, d, xs) == C.apply(~List<&2, A>, ~L.Edit<A, E>, ~(e => ys => L.edit(~A, ~E, ~ea, e, ys)), d, xs) : List<&2, A>}
+  {L.patch(~A, ~DA, ~pa, d, xs) == C.apply(~List<&2, A>, ~L.Edit<A, DA>, ~(e => ys => L.edit(~A, ~DA, ~pa, e, ys)), d, xs) : List<&2, A>}
 
 # LAW: inserting at i puts x before the element at i, or at the end when i
 # is past it.
 law edit_insert:
   for ~A: Data
-  for ~E: Data
-  for ~ea: E -> A -> A
+  for ~DA: Data
+  for ~pa: DA -> A -> A
   for xs: List<&2, A>
   for i: Nat
   for x: A
-  {L.edit(~A, ~E, ~ea, L.Insert{i, x}, xs) == List.append(&2, A, List.take(&2, A, xs, i), x <> List.drop(&2, A, xs, i)) : List<&2, A>}
+  {L.edit(~A, ~DA, ~pa, L.Insert{i, x}, xs) == List.append(&2, A, List.take(&2, A, xs, i), x <> List.drop(&2, A, xs, i)) : List<&2, A>}
 
 # LAW: deleting at i removes the element at i, or nothing when i is past
 # the end.
 law edit_delete:
   for ~A: Data
-  for ~E: Data
-  for ~ea: E -> A -> A
+  for ~DA: Data
+  for ~pa: DA -> A -> A
   for xs: List<&2, A>
   for i: Nat
-  {L.edit(~A, ~E, ~ea, L.Delete{i}, xs) == List.append(&2, A, List.take(&2, A, xs, i), List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
+  {L.edit(~A, ~DA, ~pa, L.Delete{i}, xs) == List.append(&2, A, List.take(&2, A, xs, i), List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
 
 # LAW: updating the element at i applies the change to it, in place.
 law edit_update_inside:
   for ~A: Data
-  for ~E: Data
-  for ~ea: E -> A -> A
+  for ~DA: Data
+  for ~pa: DA -> A -> A
   for xs: List<&2, A>
   for i: Nat
-  for d: C.Change<A, E>
+  for d: DA
   for x: A
   for at: {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
-  {L.edit(~A, ~E, ~ea, L.Update{i, d}, xs) == List.append(&2, A, List.take(&2, A, xs, i), C.apply(~A, ~E, ~ea, d, x) <> List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
+  {L.edit(~A, ~DA, ~pa, L.Update{i, d}, xs) == List.append(&2, A, List.take(&2, A, xs, i), pa(d, x) <> List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
 
 # LAW: updating past the end changes nothing.
 law edit_update_outside:
   for ~A: Data
-  for ~E: Data
-  for ~ea: E -> A -> A
+  for ~DA: Data
+  for ~pa: DA -> A -> A
   for xs: List<&2, A>
   for i: Nat
-  for d: C.Change<A, E>
+  for d: DA
   for past: {List.get(&2, A, xs, i) == None{} : Maybe<&2, A>}
-  {L.edit(~A, ~E, ~ea, L.Update{i, d}, xs) == xs : List<&2, A>}
+  {L.edit(~A, ~DA, ~pa, L.Update{i, d}, xs) == xs : List<&2, A>}
 
 # Mapping
 # -------
@@ -198,32 +201,36 @@ law map_con:
 # The derivative of map
 # ---------------------
 # map.change carries inserts and deletes over, and updates the same
-# position by df, a derivative of f.
+# position by df, a derivative of f: it turns an element's change DA into
+# its image's change DB, applied by `pb`. `kb` stands in for an update past
+# the end, which changes nothing whatever it carries.
 
 # LAW: map.change is correct, if df is.
 law map_change:
   for ~A: Data
-  for ~E: Data
+  for ~DA: Data
   for ~B: Data
-  for ~F: Data
-  for ~ea: E -> A -> A
-  for ~eb: F -> B -> B
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~pb: DB -> B -> B
   for ~f: A -> B
-  for ~df: A -> C.Change<A, E> -> C.Change<B, F>
-  for ~df_ok: (@x: A -> @d: C.Change<A, E> -> {C.apply(~B, ~F, ~eb, df(x, d), f(x)) == f(C.apply(~A, ~E, ~ea, d, x)) : B})
-  for d: C.Change<List<&2, A>, L.Edit<A, E>>
+  for ~df: A -> DA -> DB
+  for ~kb: DB
+  for ~df_ok: (@x: A -> @d: DA -> {pb(df(x, d), f(x)) == f(pa(d, x)) : B})
+  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
   for +xs: List<&2, A>
-  {L.patch(~B, ~F, ~eb, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, d, xs), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.patch(~A, ~E, ~ea, d, xs)) : List<&2, B>}
+  {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, d, xs)) : List<&2, B>}
 
 # LAW: map.change is local: it acts exactly where the change acts.
 law map_change_local:
   for ~A: Data
-  for ~E: Data
+  for ~DA: Data
   for ~B: Data
-  for ~F: Data
-  for ~ea: E -> A -> A
+  for ~DB: Data
+  for ~pa: DA -> A -> A
   for ~f: A -> B
-  for ~df: A -> C.Change<A, E> -> C.Change<B, F>
-  for d: C.Change<List<&2, A>, L.Edit<A, E>>
+  for ~df: A -> DA -> DB
+  for ~kb: DB
+  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
   for +xs: List<&2, A>
-  {L.shape(~B, ~F, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, d, xs)) == L.shape(~A, ~E, d) : C.Shape<L.Where>}
+  {L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, d) : C.Shape<L.Where>}

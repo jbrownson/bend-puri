@@ -35,8 +35,9 @@ input's change instead of recomputing it):
   value, and one change then another. `lift` builds a derivative from one
   that handles single edits.
 - `list.bend`: a list's edits (insert, delete, and update an element in
-  place by the element's own change), `patch` to apply a change, and
-  `map.change`, the derivative of `map`.
+  place), `patch` to apply a change, and `map.change`, the derivative of
+  `map`. An element's change can be of any type, with its own way to apply
+  it: a `Change` of the element, or something else entirely.
 - `LAWS.bend`: what applying each change returns; that a derivative lifted
   from correct single-edit derivatives is correct; and the two laws of
   `map.change`: it is correct (given a correct derivative for the mapped
