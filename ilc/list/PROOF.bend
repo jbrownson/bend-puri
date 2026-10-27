@@ -2,6 +2,8 @@ import Base
 import ../change/change.bend as C
 import ./list.bend as L
 import ./LAWS.bend as Laws
+import ../change/LAWS.bend as CL
+import ../change/PROOF.bend as CP
 
 # Helpers
 # -------
@@ -145,6 +147,9 @@ def Laws.edit_map_delete(A, DA, B, DB, fa, fd, i):
 def Laws.edit_map_update(A, DA, B, DB, fa, fd, i, d):
   {==}
 
+def Laws.shape(A, DA, d):
+  {==}
+
 def Laws.map_nil(A, B, f):
   {==}
 
@@ -193,8 +198,8 @@ def map_remove(A, B, f, xs, i):
       %Equal.sym(List<&2, B>, L.remove(B, L.map(~A, ~B, ~f, t), p), L.map(~A, ~B, ~f, L.remove(A, t, p)), map_remove(~A, ~B, ~f, t, p)) : {f(h) <> _ == f(h) <> L.map(~A, ~B, ~f, L.remove(A, t, p)) : List<&2, B>}
       {==}
 
-# Lemma: mapping after an update updates the mapped element by f's
-# derivative, if that derivative is correct.
+# Lemma: mapping after an update updates the mapped element by g's
+# derivative, if g is correct.
 law map_update:
   for ~A: Data
   for ~DA: Data
@@ -202,27 +207,26 @@ law map_update:
   for ~DB: Data
   for ~pa: DA -> A -> A
   for ~pb: DB -> B -> B
-  for ~f: A -> B
-  for ~df: A -> DA -> DB
+  for ~g: C.Inc<A, DA, B, DB>
   for ~kb: DB
-  for ~df_ok: (@x: A -> @d: DA -> {pb(df(x, d), f(x)) == f(pa(d, x)) : B})
+  for ~g_ok: C.Inc.ok(A, DA, B, DB, pa, pb, g)
   for xs: List<&2, A>
   for i: Nat
   for d: DA
-  {L.update(~B, ~DB, ~pb, L.map(~A, ~B, ~f, xs), i, L.map.at(~A, ~DA, ~B, ~DB, ~df, ~kb, List.get(&2, A, xs, i), d)) == L.map(~A, ~B, ~f, L.update(~A, ~DA, ~pa, xs, i, d)) : List<&2, B>}
+  {L.update(~B, ~DB, ~pb, L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), i, L.map.at(~A, ~DA, ~B, ~DB, ~g, ~kb, List.get(&2, A, xs, i), d)) == L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~pa, xs, i, d)) : List<&2, B>}
 
-def map_update(A, DA, B, DB, pa, pb, f, df, kb, df_ok, xs, i, d):
+def map_update(A, DA, B, DB, pa, pb, g, kb, g_ok, xs, i, d):
   match xs i:
     case Nil{} _:
       {==}
     case Con{h, t} 0n:
-      %Equal.sym(B, pb(df(h, d), f(h)), f(pa(d, h)), df_ok(h, d)) : {_ <> L.map(~A, ~B, ~f, t) == f(pa(d, h)) <> L.map(~A, ~B, ~f, t) : List<&2, B>}
+      %Equal.sym(B, pb(C.Inc.df(A, DA, B, DB, g)(h, d), C.Inc.f(A, DA, B, DB, g)(h)), C.Inc.f(A, DA, B, DB, g)(pa(d, h)), g_ok(h, d)) : {_ <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t) == C.Inc.f(A, DA, B, DB, g)(pa(d, h)) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t) : List<&2, B>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, B>, L.update(~B, ~DB, ~pb, L.map(~A, ~B, ~f, t), p, L.map.at(~A, ~DA, ~B, ~DB, ~df, ~kb, List.get(&2, A, t, p), d)), L.map(~A, ~B, ~f, L.update(~A, ~DA, ~pa, t, p, d)), map_update(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, t, p, d)) : {f(h) <> _ == f(h) <> L.map(~A, ~B, ~f, L.update(~A, ~DA, ~pa, t, p, d)) : List<&2, B>}
+      %Equal.sym(List<&2, B>, L.update(~B, ~DB, ~pb, L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t), p, L.map.at(~A, ~DA, ~B, ~DB, ~g, ~kb, List.get(&2, A, t, p), d)), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~pa, t, p, d)), map_update(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~g, ~kb, ~g_ok, t, p, d)) : {C.Inc.f(A, DA, B, DB, g)(h) <> _ == C.Inc.f(A, DA, B, DB, g)(h) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~pa, t, p, d)) : List<&2, B>}
       {==}
 
-# Lemma: map.edit is correct for every single edit, if df is.
+# Lemma: map.edit is correct for every single edit, if g is.
 law map_edit_ok:
   for ~A: Data
   for ~DA: Data
@@ -230,44 +234,34 @@ law map_edit_ok:
   for ~DB: Data
   for ~pa: DA -> A -> A
   for ~pb: DB -> B -> B
-  for ~f: A -> B
-  for ~df: A -> DA -> DB
+  for ~g: C.Inc<A, DA, B, DB>
   for ~kb: DB
-  for ~df_ok: (@x: A -> @d: DA -> {pb(df(x, d), f(x)) == f(pa(d, x)) : B})
+  for ~g_ok: C.Inc.ok(A, DA, B, DB, pa, pb, g)
   for xs: List<&2, A>
   for e: L.Edit<A, DA>
-  {L.patch(~B, ~DB, ~pb, L.map.edit(~A, ~DA, ~B, ~DB, ~f, ~df, ~kb, xs, e), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.edit(~A, ~DA, ~pa, e, xs)) : List<&2, B>}
+  {L.patch(~B, ~DB, ~pb, L.map.edit(~A, ~DA, ~B, ~DB, ~g, ~kb, xs, e), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs)) == L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.edit(~A, ~DA, ~pa, e, xs)) : List<&2, B>}
 
-def map_edit_ok(A, DA, B, DB, pa, pb, f, df, kb, df_ok, xs, e):
+def map_edit_ok(A, DA, B, DB, pa, pb, g, kb, g_ok, xs, e):
   match e:
     case L.Insert{i, x}:
-      map_insert(~A, ~B, ~f, xs, i, x)
+      map_insert(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i, x)
     case L.Delete{i}:
-      map_remove(~A, ~B, ~f, xs, i)
+      map_remove(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i)
     case L.Update{i, d}:
-      map_update(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, xs, i, d)
+      map_update(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~g, ~kb, ~g_ok, xs, i, d)
 
-# The same induction as lift's law. (Lift's law gives this directly, but
-# BendTT, the kernel behind --verdict, can't yet check a law instantiated
-# with functions, so map.change is proved on its own.)
-def Laws.map_change(A, DA, B, DB, pa, pb, f, df, kb, df_ok, d, xs):
-  match d:
-    case C.Keep{}:
-      {==}
-    case C.Replace{ys}:
-      {==}
-    case C.Edit{e}:
-      map_edit_ok(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, xs, e)
-    case C.Then{+p, q}:
-      %Equal.sym(List<&2, B>, L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs), L.map(~A, ~B, ~f, xs)), L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, p, xs)), Laws.map_change(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, p, xs)) : {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)), _) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, q, L.patch(~A, ~DA, ~pa, p, xs))) : List<&2, B>}
-      Laws.map_change(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, q, L.patch(~A, ~DA, ~pa, p, xs))
-
-def Laws.shape(A, DA, d):
+def Laws.map_inc(A, DA, B, DB, pa, g, kb):
   {==}
+
+# map.inc(g) is lift applied to map.edit, so lift's law gives it.
+def Laws.map_inc_ok(A, DA, B, DB, pa, pb, g, kb, g_ok):
+  CL.lift_ok(~List<&2, A>, ~L.Edit<A, DA>, ~List<&2, B>, ~L.Edit<B, DB>, ~(e => ys => L.edit(~A, ~DA, ~pa, e, ys)), ~(e => ys => L.edit(~B, ~DB, ~pb, e, ys)),
+    ~C.Inc{ys => L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys), ys => e => L.map.edit(~A, ~DA, ~B, ~DB, ~g, ~kb, ys, e)},
+    ~(xs => e => map_edit_ok(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~g, ~kb, ~g_ok, xs, e)))
 
 # By induction on the change; a single edit maps to an edit of the same
 # kind at the same position.
-def Laws.map_change_local(A, DA, B, DB, pa, f, df, kb, d, xs):
+def Laws.dmap_local(A, DA, B, DB, pa, g, kb, d, xs):
   match d:
     case C.Keep{}:
       {==}
@@ -282,6 +276,6 @@ def Laws.map_change_local(A, DA, B, DB, pa, f, df, kb, d, xs):
         case L.Update{i, u}:
           {==}
     case C.Then{+p, q}:
-      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs)), L.shape(~A, ~DA, p), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs)) : {C.Then{_, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)))} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
-      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))), L.shape(~A, ~DA, q), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))) : {C.Then{L.shape(~A, ~DA, p), _} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, p, xs)), L.shape(~A, ~DA, p), Laws.dmap_local(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, p, xs)) : {C.Then{_, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)))} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))), L.shape(~A, ~DA, q), Laws.dmap_local(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))) : {C.Then{L.shape(~A, ~DA, p), _} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
       {==}

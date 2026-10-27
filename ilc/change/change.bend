@@ -28,27 +28,54 @@ def apply(~A: Data, ~E: Data, ~edit: E -> A -> A, d: Change<A, E>, a: A) -> A:
     case Then{p, q}:
       apply(~A, ~E, ~edit, q, apply(~A, ~E, ~edit, p, a))
 
-# A derivative of f, lifted from single edits. `fe` gives the change one
-# edit makes to f's result, from the value before the edit; lift gives the
-# change any change makes. A replacement replaces the result.
-def lift(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~ea: EA -> A -> A, ~f: A -> B,
-  ~fe: A -> EA -> Change<B, EB>, d: Change<A, EA>, +a: A) -> Change<B, EB>:
+# An incremental function: a function f, and its derivative df, which
+# gives the change to f's result from a value and the value's change.
+type Inc<-A: Data, -DA: Data, -B: Data, -DB: Data> is Type:
+  Inc{f: A -> B, df: A -> DA -> DB}
+
+def Inc.f(-A: Data, -DA: Data, -B: Data, -DB: Data, g: Inc<A, DA, B, DB>) -> A -> B:
+  match g:
+    case Inc{f, df}:
+      f
+
+def Inc.df(-A: Data, -DA: Data, -B: Data, -DB: Data, g: Inc<A, DA, B, DB>) -> A -> DA -> DB:
+  match g:
+    case Inc{f, df}:
+      df
+
+# g's derivative is correct, for changes applied by pa and pb: applying
+# its change to f(a) gives f of the changed value.
+def Inc.ok(-A: Data, -DA: Data, -B: Data, -DB: Data, pa: DA -> A -> A, pb: DB -> B -> B,
+  g: Inc<A, DA, B, DB>) -> Type:
+  @a: A -> @d: DA -> {pb(Inc.df(A, DA, B, DB, g)(a, d), Inc.f(A, DA, B, DB, g)(a)) == Inc.f(A, DA, B, DB, g)(pa(d, a)) : B}
+
+# The derivative lift builds from g's: one edit is g's, a replacement
+# replaces the result, and one change then another lifts the second from
+# the value the first produced.
+def lift.df(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~ea: EA -> A -> A,
+  ~g: Inc<A, EA, B, Change<B, EB>>, d: Change<A, EA>, +a: A) -> Change<B, EB>:
   match d:
     case Keep{}:
       Keep{}
     case Replace{x}:
-      Replace{f(x)}
+      Replace{Inc.f(A, EA, B, Change<B, EB>, g)(x)}
     case Edit{e}:
-      fe(a, e)
+      Inc.df(A, EA, B, Change<B, EB>, g)(a, e)
     case Then{+p, q}:
-      Then{lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, p, a),
-        lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, q, apply(~A, ~EA, ~ea, p, a))}
+      Then{lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, p, a),
+        lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, q, apply(~A, ~EA, ~ea, p, a))}
 
-# The derivative that recomputes: whatever the change, replace the result.
-# The input's changes DA can be of any type, applied by `pa`.
-def recompute(~A: Data, ~DA: Data, ~B: Data, ~EB: Data, ~pa: DA -> A -> A, ~f: A -> B,
-  a: A, d: DA) -> Change<B, EB>:
-  Replace{f(pa(d, a))}
+# Lifts an incremental function whose derivative handles single edits to
+# one whose derivative handles any change.
+def lift(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~ea: EA -> A -> A,
+  ~g: Inc<A, EA, B, Change<B, EB>>) -> Inc<A, Change<A, EA>, B, Change<B, EB>>:
+  Inc{Inc.f(A, EA, B, Change<B, EB>, g), a => d => lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, d, a)}
+
+# f, with the derivative that recomputes: whatever the change, replace the
+# result.
+def recompute(~A: Data, ~DA: Data, ~B: Data, ~EB: Data, ~pa: DA -> A -> A, ~f: A -> B) ->
+  Inc<A, DA, B, Change<B, EB>>:
+  Inc{f, a => d => Replace{f(pa(d, a))}}
 
 # A change with its values mapped by fa and its edits by fe: the same
 # changes, in the same order.

@@ -17,7 +17,7 @@ law patch:
   for ~A: Data
   for ~DA: Data
   for ~pa: DA -> A -> A
-  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
+  for d: L.Change(A, DA)
   for xs: List<&2, A>
   {L.patch(~A, ~DA, ~pa, d, xs) == C.apply(~List<&2, A>, ~L.Edit<A, DA>, ~(e => ys => L.edit(~A, ~DA, ~pa, e, ys)), d, xs) : List<&2, A>}
 
@@ -100,6 +100,14 @@ law edit_map_update:
   for d: DA
   {L.Edit.map(~A, ~DA, ~B, ~DB, ~fa, ~fd, L.Update{i, d}) == L.Update{i, fd(d)} : L.Edit<B, DB>}
 
+# LAW: a list change's shape is the change with every value replaced by
+# Unit{}: what remains is each edit's kind and position.
+law shape:
+  for ~A: Data
+  for ~DA: Data
+  for d: L.Change(A, DA)
+  {L.shape(~A, ~DA, d) == C.map(~List<&2, A>, ~L.Edit<A, DA>, ~Unit, ~L.Edit<Unit, Unit>, ~(xs => Unit{}), ~(e => L.Edit.map(~A, ~DA, ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d) : C.Change<Unit, L.Edit<Unit, Unit>>}
+
 # Mapping
 # -------
 
@@ -121,45 +129,46 @@ law map_con:
 
 # The derivative of map
 # ---------------------
-# map.change carries inserts and deletes over, and updates the same
-# position by df, a derivative of f: it turns an element's change DA into
-# its image's change DB, applied by `pb`. `kb` stands in for an update past
-# the end, which changes nothing whatever it carries.
+# g is an Inc<A, DA, B, DB>: a function on elements and its derivative.
+# map.inc(g) maps g's function over a list, and its derivative, dmap,
+# turns a change to the list into the change to the mapped list: it
+# carries inserts and deletes over, and updates the same position by g's
+# derivative. `kb` stands in for an update past the end, which changes
+# nothing whatever it carries.
 
-# LAW: map.change is correct, if df is.
-law map_change:
+# LAW: map.inc(g) maps g's function, with dmap for its derivative.
+law map_inc:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  {L.map.inc(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb) == C.Inc{xs => L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, d, xs)} : C.Inc<List<&2, A>, L.Change(A, DA), List<&2, B>, L.Change(B, DB)>}
+
+# LAW: map.inc(g) is correct, if g is.
+law map_inc_ok:
   for ~A: Data
   for ~DA: Data
   for ~B: Data
   for ~DB: Data
   for ~pa: DA -> A -> A
   for ~pb: DB -> B -> B
-  for ~f: A -> B
-  for ~df: A -> DA -> DB
+  for ~g: C.Inc<A, DA, B, DB>
   for ~kb: DB
-  for ~df_ok: (@x: A -> @d: DA -> {pb(df(x, d), f(x)) == f(pa(d, x)) : B})
-  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
-  for +xs: List<&2, A>
-  {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, d, xs)) : List<&2, B>}
+  for ~g_ok: C.Inc.ok(A, DA, B, DB, pa, pb, g)
+  C.Inc.ok(List<&2, A>, L.Change(A, DA), List<&2, B>, L.Change(B, DB), (d => xs => L.patch(~A, ~DA, ~pa, d, xs)), (d => ys => L.patch(~B, ~DB, ~pb, d, ys)), L.map.inc(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb))
 
-# LAW: a list change's shape is the change with every value replaced by
-# Unit{}: what remains is each edit's kind and position.
-law shape:
-  for ~A: Data
-  for ~DA: Data
-  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
-  {L.shape(~A, ~DA, d) == C.map(~List<&2, A>, ~L.Edit<A, DA>, ~Unit, ~L.Edit<Unit, Unit>, ~(xs => Unit{}), ~(e => L.Edit.map(~A, ~DA, ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d) : C.Change<Unit, L.Edit<Unit, Unit>>}
-
-# LAW: map.change is local: it acts exactly where the change acts.
-law map_change_local:
+# LAW: dmap is local: it acts exactly where the change acts.
+law dmap_local:
   for ~A: Data
   for ~DA: Data
   for ~B: Data
   for ~DB: Data
   for ~pa: DA -> A -> A
-  for ~f: A -> B
-  for ~df: A -> DA -> DB
+  for ~g: C.Inc<A, DA, B, DB>
   for ~kb: DB
-  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
+  for d: L.Change(A, DA)
   for +xs: List<&2, A>
-  {L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, d) : C.Change<Unit, L.Edit<Unit, Unit>>}
+  {L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, d, xs)) == L.shape(~A, ~DA, d) : C.Change<Unit, L.Edit<Unit, Unit>>}

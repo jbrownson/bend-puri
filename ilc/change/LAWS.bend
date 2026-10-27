@@ -122,31 +122,92 @@ law map_then:
   for q: C.Change<A, EA>
   {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Then{p, q}) == C.Then{C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, p), C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, q)} : C.Change<B, EB>}
 
-# Derivatives
-# -----------
-# A derivative of f: A -> B takes a value and its change, and gives the
-# change to f's result. It is correct when applying that change to f(a)
-# gives f of the changed value.
+# Incremental functions
+# ---------------------
+# An Inc<A, DA, B, DB> is a function f: A -> B with its derivative df,
+# which takes a value and its change DA, and gives the change DB to f's
+# result.
 
-# LAW: a derivative lifted from single edits is correct for every change,
-# if it is correct for every single edit.
+# LAW: Inc.f gives the function.
+law inc_f:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~f: A -> B
+  for ~df: A -> DA -> DB
+  {C.Inc.f(A, DA, B, DB, C.Inc{f, df}) == f : A -> B}
+
+# LAW: Inc.df gives the derivative.
+law inc_df:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~f: A -> B
+  for ~df: A -> DA -> DB
+  {C.Inc.df(A, DA, B, DB, C.Inc{f, df}) == df : A -> DA -> DB}
+
+# LAW: an Inc is correct, for changes applied by pa and pb, when applying
+# its derivative's change to f(a) gives f of the changed value.
+law inc_ok:
+  for -A: Data
+  for -DA: Data
+  for -B: Data
+  for -DB: Data
+  for -pa: DA -> A -> A
+  for -pb: DB -> B -> B
+  for -g: C.Inc<A, DA, B, DB>
+  {C.Inc.ok(A, DA, B, DB, pa, pb, g) == (@a: A -> @d: DA -> {pb(C.Inc.df(A, DA, B, DB, g)(a, d), C.Inc.f(A, DA, B, DB, g)(a)) == C.Inc.f(A, DA, B, DB, g)(pa(d, a)) : B}) : Type}
+
+# Lifting
+# -------
+# lift turns g, whose derivative handles one edit of A, applied by `ea`,
+# into an Inc whose derivative handles any change.
+
+# LAW: lift(g) has g's function, and lift.df for its derivative: one edit
+# gives g's change, a replacement replaces the result, and one change then
+# another lifts the second from the value the first produced.
 law lift:
   for ~A: Data
   for ~EA: Data
   for ~B: Data
   for ~EB: Data
   for ~ea: EA -> A -> A
-  for ~eb: EB -> B -> B
-  for ~f: A -> B
-  for ~fe: A -> EA -> C.Change<B, EB>
-  for ~fe_ok: (@a: A -> @e: EA -> {C.apply(~B, ~EB, ~eb, fe(a, e), f(a)) == f(ea(e, a)) : B})
-  for d: C.Change<A, EA>
-  for +a: A
-  {C.apply(~B, ~EB, ~eb, C.lift(~A, ~EA, ~B, ~EB, ~ea, ~f, ~fe, d, a), f(a)) == f(C.apply(~A, ~EA, ~ea, d, a)) : B}
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  {C.lift(~A, ~EA, ~B, ~EB, ~ea, ~g) == C.Inc{C.Inc.f(A, EA, B, C.Change<B, EB>, g), a => d => C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, d, a)} : C.Inc<A, C.Change<A, EA>, B, C.Change<B, EB>>}
 
-# LAW: recomputing is a correct derivative of any function, for changes of
-# any type DA, applied by `pa`.
+# LAW: lift(g) is correct for every change, if g is correct for every
+# single edit.
+law lift_ok:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~eb: EB -> B -> B
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  for ~g_ok: C.Inc.ok(A, EA, B, C.Change<B, EB>, ea, (d => b => C.apply(~B, ~EB, ~eb, d, b)), g)
+  C.Inc.ok(A, C.Change<A, EA>, B, C.Change<B, EB>, (d => a => C.apply(~A, ~EA, ~ea, d, a)), (d => b => C.apply(~B, ~EB, ~eb, d, b)), C.lift(~A, ~EA, ~B, ~EB, ~ea, ~g))
+
+# Recomputing
+# -----------
+
+# LAW: recompute(f) is f, with the derivative that replaces the result
+# with f of the changed value.
 law recompute:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~pa: DA -> A -> A
+  for ~f: A -> B
+  {C.recompute(~A, ~DA, ~B, ~EB, ~pa, ~f) == C.Inc{f, a => d => C.Replace{f(pa(d, a))}} : C.Inc<A, DA, B, C.Change<B, EB>>}
+
+# It follows that:
+
+# LAW: recomputing is correct, for any function.
+law recompute_ok:
   for ~A: Data
   for ~DA: Data
   for ~B: Data
@@ -154,6 +215,4 @@ law recompute:
   for ~pa: DA -> A -> A
   for ~eb: EB -> B -> B
   for ~f: A -> B
-  for a: A
-  for d: DA
-  {C.apply(~B, ~EB, ~eb, C.recompute(~A, ~DA, ~B, ~EB, ~pa, ~f, a, d), f(a)) == f(pa(d, a)) : B}
+  C.Inc.ok(A, DA, B, C.Change<B, EB>, pa, (d => b => C.apply(~B, ~EB, ~eb, d, b)), C.recompute(~A, ~DA, ~B, ~EB, ~pa, ~f))
