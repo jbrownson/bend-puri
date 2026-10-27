@@ -2,8 +2,8 @@ import Base
 import ../change/change.bend as C
 
 # A list's own edits, and mapping a function over a list and over its
-# changes. Positions count from 0. DA is the elements' change type, of any
-# kind, and `pa` applies one, so an update changes an element in place.
+# changes. Positions count from 0. The elements change by DA, of any kind,
+# as `ca` says, so an update changes an element in place.
 # The laws cover changes whose positions are in range; past the end, these
 # functions still give an answer (an insert appends, a delete or an update
 # does nothing), which nothing relies on.
@@ -35,28 +35,36 @@ def remove(-A: Data, xs: List<&2, A>, i: Nat) -> List<&2, A>:
     case Con{h, t} 1n+p:
       h <> remove(A, t, p)
 
-def update(~A: Data, ~DA: Data, ~pa: DA -> A -> A, xs: List<&2, A>, i: Nat, d: DA) -> List<&2, A>:
+def update(~A: Data, ~DA: Data, ~ca: C.Changes<A, DA>, xs: List<&2, A>, i: Nat, d: DA) -> List<&2, A>:
   match xs i:
     case Nil{} _:
       Nil{}
     case Con{h, t} 0n:
-      pa(d, h) <> t
+      C.Changes.apply(A, DA, ca)(d, h) <> t
     case Con{h, t} 1n+p:
-      h <> update(~A, ~DA, ~pa, t, p, d)
+      h <> update(~A, ~DA, ~ca, t, p, d)
 
 # The list after one edit.
-def edit(~A: Data, ~DA: Data, ~pa: DA -> A -> A, e: Edit<A, DA>, xs: List<&2, A>) -> List<&2, A>:
+def edit(~A: Data, ~DA: Data, ~ca: C.Changes<A, DA>, e: Edit<A, DA>, xs: List<&2, A>) -> List<&2, A>:
   match e:
     case Insert{i, x}:
       insert(A, xs, i, x)
     case Delete{i}:
       remove(A, xs, i)
     case Update{i, d}:
-      update(~A, ~DA, ~pa, xs, i, d)
+      update(~A, ~DA, ~ca, xs, i, d)
 
-# The list after a change: Change's apply, with a list's edits.
-def patch(~A: Data, ~DA: Data, ~pa: DA -> A -> A, d: Change(A, DA), xs: List<&2, A>) -> List<&2, A>:
-  C.apply(~List<&2, A>, ~Edit<A, DA>, ~(e => ys => edit(~A, ~DA, ~pa, e, ys)), d, xs)
+# How a list changes by one edit.
+def edits(~A: Data, ~DA: Data, ~ca: C.Changes<A, DA>) -> C.Changes<List<&2, A>, Edit<A, DA>>:
+  C.Changes{e => xs => edit(~A, ~DA, ~ca, e, xs)}
+
+# How a list changes by a change: Change's apply, with a list's edits.
+def changes(~A: Data, ~DA: Data, ~ca: C.Changes<A, DA>) -> C.Changes<List<&2, A>, Change(A, DA)>:
+  C.changes(~List<&2, A>, ~Edit<A, DA>, ~edits(~A, ~DA, ~ca))
+
+# The list after a change.
+def patch(~A: Data, ~DA: Data, ~ca: C.Changes<A, DA>, d: Change(A, DA), xs: List<&2, A>) -> List<&2, A>:
+  C.apply(~List<&2, A>, ~Edit<A, DA>, ~edits(~A, ~DA, ~ca), d, xs)
 
 def map(~A: Data, ~B: Data, ~f: A -> B, xs: List<&2, A>) -> List<&2, B>:
   match xs:
@@ -91,17 +99,17 @@ def map.edit(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~g: C.Inc<A, DA, B, DB>,
 
 # map's derivative: the change to the list g maps to, from the list and its
 # change, lifted from map.edit.
-def dmap(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~g: C.Inc<A, DA, B, DB>,
+def dmap(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~ca: C.Changes<A, DA>, ~g: C.Inc<A, DA, B, DB>,
   d: Change(A, DA), +xs: List<&2, A>) -> Change(B, DB):
-  C.lift.df(~List<&2, A>, ~Edit<A, DA>, ~List<&2, B>, ~Edit<B, DB>, ~(e => ys => edit(~A, ~DA, ~pa, e, ys)),
+  C.lift.df(~List<&2, A>, ~Edit<A, DA>, ~List<&2, B>, ~Edit<B, DB>, ~edits(~A, ~DA, ~ca),
     ~C.Inc{ys => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys), ys => e => map.edit(~A, ~DA, ~B, ~DB, ~g, ys, e)},
     d, xs)
 
 # map, as an incremental function: g's function mapped over a list, with
 # dmap as its derivative.
-def map.inc(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~g: C.Inc<A, DA, B, DB>) ->
+def map.inc(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~ca: C.Changes<A, DA>, ~g: C.Inc<A, DA, B, DB>) ->
   C.Inc<List<&2, A>, Change(A, DA), List<&2, B>, Change(B, DB)>:
-  C.Inc{xs => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, d, xs)}
+  C.Inc{xs => map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, d, xs)}
 
 # An edit with its element mapped by fa and its element change by fd.
 def Edit.map(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~fa: A -> B, ~fd: DA -> DB,

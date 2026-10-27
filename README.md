@@ -34,16 +34,18 @@ every module's proofs.
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
 
-- `change/`: changes to any value. A type supplies its own edits;
-  `Change` adds what every type has: no change, starting over with a new
-  value, and one change then another. An `Inc` pairs a function with its
-  derivative, which gives the change to the function's result from a
-  change to its input. `lift` turns an `Inc` whose derivative handles
-  single edits into one that handles any change. The laws say what
-  applying each change returns, what `lift`'s derivative returns for each
-  kind of change, and that lifting a correct `Inc` gives a correct one.
+- `change/`: changes to any value. A `Changes` says how a type's values
+  change: the type of its changes, and how to apply one. A type supplies its
+  own edits; `Change` adds what every type has: no change, starting over
+  with a new value, and one change then another. An `Inc` pairs a function
+  with its derivative, which gives the change to the function's result from
+  a change to its input. `lift` turns an `Inc` whose derivative handles
+  single edits into one that handles any change. The laws say what applying
+  each change returns, what `lift`'s derivative returns for each kind of
+  change, and that lifting a correct `Inc` gives a correct one.
 - `list/`: a list's edits (insert, delete, and update an element in
-  place), `patch` to apply a change, and `map.inc`, which maps an `Inc`
+  place), how a list changes given how its elements do (`edits`,
+  `changes`), `patch` to apply a change, and `map.inc`, which maps an `Inc`
   over lists; its derivative is `dmap`. An element's change can be of any
   type, with its own way to apply it: a `Change` of the element, or
   something else entirely. The laws cover changes whose positions are in
