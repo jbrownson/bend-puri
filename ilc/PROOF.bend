@@ -1,21 +1,27 @@
 import Base
+import ./change.bend as C
 import ./list.bend as L
 import ./LAWS.bend as Laws
 
-def Bool.holds(b: Bool) -> Type:
-  match b:
-    case True{}:
-      Unit
-    case False{}:
-      Empty
+# Helpers
+# -------
 
-# Helper: False is not True.
-law clash:
-  for e: {False{} == True{} : Bool}
+def Maybe.holds(-A: Data, m: Maybe<&2, A>) -> Type:
+  match m:
+    case None{}:
+      Empty
+    case Some{v}:
+      Unit
+
+# Helper: something is not nothing.
+law some_none:
+  for -A: Data
+  for -x: A
+  for e: {Some{x} == None{} : Maybe<&2, A>}
   Empty
 
-def clash(e):
-  %Equal.sym(Bool, False{}, True{}, e) : Bool.holds(_)
+def some_none(A, x, e):
+  %e : Maybe.holds(A, _)
   Unit{}
 
 # Helper: dropping nothing gives the list back.
@@ -31,8 +37,55 @@ def drop_zero(A, t):
     case Con{h, r}:
       {==}
 
-# Applying a change
-# -----------------
+# Changes to any value
+# --------------------
+
+def Laws.apply_keep(A, E, edit, a):
+  {==}
+
+def Laws.apply_replace(A, E, edit, x, a):
+  {==}
+
+def Laws.apply_edit(A, E, edit, e, a):
+  {==}
+
+def Laws.apply_then(A, E, edit, p, q, a):
+  {==}
+
+def Laws.then_keep_left(A, E, edit, q, a):
+  {==}
+
+def Laws.then_keep_right(A, E, edit, p, a):
+  {==}
+
+def Laws.then_assoc(A, E, edit, p, q, r, a):
+  {==}
+
+# Derivatives
+# -----------
+
+# By induction on the change: after the first part of a Then, the lifted
+# derivative of the rest starts from the value the first part produced.
+def Laws.lift(A, E, B, F, ea, eb, f, fe, fe_ok, d, a):
+  match d:
+    case C.Keep{}:
+      {==}
+    case C.Replace{x}:
+      {==}
+    case C.Edit{e}:
+      fe_ok(a, e)
+    case C.Then{+p, q}:
+      %Equal.sym(B, C.apply(~B, ~F, ~eb, C.lift(~A, ~E, ~B, ~F, ~ea, ~f, ~fe, p, a), f(a)), f(C.apply(~A, ~E, ~ea, p, a)), Laws.lift(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~fe, ~fe_ok, p, a)) : {C.apply(~B, ~F, ~eb, C.lift(~A, ~E, ~B, ~F, ~ea, ~f, ~fe, q, C.apply(~A, ~E, ~ea, p, a)), _) == f(C.apply(~A, ~E, ~ea, q, C.apply(~A, ~E, ~ea, p, a))) : B}
+      Laws.lift(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~fe, ~fe_ok, q, C.apply(~A, ~E, ~ea, p, a))
+
+def Laws.recompute(A, E, B, F, ea, eb, f, a, d):
+  {==}
+
+# Lists
+# -----
+
+def Laws.patch(A, E, ea, d, xs):
+  {==}
 
 # Lemma: insert puts x between the first i elements and the rest.
 law insert_split:
@@ -69,68 +122,63 @@ def remove_split(A, xs, i):
       %Equal.sym(List<&2, A>, L.remove(A, t, p), List.append(&2, A, List.take(&2, A, t, p), List.drop(&2, A, t, 1n+p)), remove_split(A, t, p)) : {h <> _ == h <> List.append(&2, A, List.take(&2, A, t, p), List.drop(&2, A, t, 1n+p)) : List<&2, A>}
       {==}
 
-# Lemma: set at a position inside the list puts x in place of the element
-# there.
-law set_inside:
-  for -A: Data
+def Laws.edit_insert(A, E, ea, xs, i, x):
+  insert_split(A, xs, i, x)
+
+def Laws.edit_delete(A, E, ea, xs, i):
+  remove_split(A, xs, i)
+
+# Lemma: update at a position holding x puts the changed x in its place.
+law update_inside:
+  for ~A: Data
+  for ~E: Data
+  for ~ea: E -> A -> A
   for xs: List<&2, A>
   for i: Nat
+  for d: C.Change<A, E>
   for x: A
-  for inside: {Nat.is_lt(i, List.length(&2, A, xs)) == True{} : Bool}
-  {L.set(A, xs, i, x) == List.append(&2, A, List.take(&2, A, xs, i), x <> List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
+  for at: {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
+  {L.update(~A, ~E, ~ea, xs, i, d) == List.append(&2, A, List.take(&2, A, xs, i), C.apply(~A, ~E, ~ea, d, x) <> List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
 
-def set_inside(A, xs, i, x, inside):
+def update_inside(A, E, ea, xs, i, d, x, at):
   match xs i:
-    case Nil{} 0n:
-      Empty.absurd({L.set(A, Nil{}, 0n, x) == List.append(&2, A, List.take(&2, A, Nil{}, 0n), x <> List.drop(&2, A, Nil{}, 1n)) : List<&2, A>}, clash(inside))
-    case Nil{} 1n+p:
-      Empty.absurd({L.set(A, Nil{}, 1n+p, x) == List.append(&2, A, List.take(&2, A, Nil{}, 1n+p), x <> List.drop(&2, A, Nil{}, 1n+1n+p)) : List<&2, A>}, clash(inside))
+    case Nil{} _:
+      Empty.absurd({L.update(~A, ~E, ~ea, Nil{}, i, d) == List.append(&2, A, List.take(&2, A, Nil{}, i), C.apply(~A, ~E, ~ea, d, x) <> List.drop(&2, A, Nil{}, 1n+i)) : List<&2, A>},
+        some_none(A, x, Equal.sym(Maybe<&2, A>, None{}, Some{x}, at)))
     case Con{h, t} 0n:
-      %Equal.sym(List<&2, A>, List.drop(&2, A, t, 0n), t, drop_zero(A, t)) : {x <> t == x <> _ : List<&2, A>}
+      %Equal.cong(Maybe<&2, A>, A, m => Maybe.default(&2, A, m, h), Some{h}, Some{x}, at) : {C.apply(~A, ~E, ~ea, d, h) <> t == C.apply(~A, ~E, ~ea, d, _) <> List.drop(&2, A, t, 0n) : List<&2, A>}
+      %Equal.sym(List<&2, A>, List.drop(&2, A, t, 0n), t, drop_zero(A, t)) : {C.apply(~A, ~E, ~ea, d, h) <> t == C.apply(~A, ~E, ~ea, d, h) <> _ : List<&2, A>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, A>, L.set(A, t, p, x), List.append(&2, A, List.take(&2, A, t, p), x <> List.drop(&2, A, t, 1n+p)), set_inside(A, t, p, x, inside)) : {h <> _ == h <> List.append(&2, A, List.take(&2, A, t, p), x <> List.drop(&2, A, t, 1n+p)) : List<&2, A>}
+      %Equal.sym(List<&2, A>, L.update(~A, ~E, ~ea, t, p, d), List.append(&2, A, List.take(&2, A, t, p), C.apply(~A, ~E, ~ea, d, x) <> List.drop(&2, A, t, 1n+p)), update_inside(~A, ~E, ~ea, t, p, d, x, at)) : {h <> _ == h <> List.append(&2, A, List.take(&2, A, t, p), C.apply(~A, ~E, ~ea, d, x) <> List.drop(&2, A, t, 1n+p)) : List<&2, A>}
       {==}
 
-# Lemma: set past the end leaves the list as it was.
-law set_outside:
-  for -A: Data
+# Lemma: update past the end leaves the list as it was.
+law update_outside:
+  for ~A: Data
+  for ~E: Data
+  for ~ea: E -> A -> A
   for xs: List<&2, A>
   for i: Nat
-  for x: A
-  for outside: {Nat.is_lt(i, List.length(&2, A, xs)) == False{} : Bool}
-  {L.set(A, xs, i, x) == xs : List<&2, A>}
+  for d: C.Change<A, E>
+  for past: {List.get(&2, A, xs, i) == None{} : Maybe<&2, A>}
+  {L.update(~A, ~E, ~ea, xs, i, d) == xs : List<&2, A>}
 
-def set_outside(A, xs, i, x, outside):
+def update_outside(A, E, ea, xs, i, d, past):
   match xs i:
     case Nil{} _:
       {==}
     case Con{h, t} 0n:
-      Empty.absurd({L.set(A, h <> t, 0n, x) == h <> t : List<&2, A>}, clash(Equal.sym(Bool, True{}, False{}, outside)))
+      Empty.absurd({L.update(~A, ~E, ~ea, h <> t, 0n, d) == h <> t : List<&2, A>}, some_none(A, h, past))
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, A>, L.set(A, t, p, x), t, set_outside(A, t, p, x, outside)) : {h <> _ == h <> t : List<&2, A>}
+      %Equal.sym(List<&2, A>, L.update(~A, ~E, ~ea, t, p, d), t, update_outside(~A, ~E, ~ea, t, p, d, past)) : {h <> _ == h <> t : List<&2, A>}
       {==}
 
-def Laws.patch_keep(A, xs):
-  {==}
+def Laws.edit_update_inside(A, E, ea, xs, i, d, x, at):
+  update_inside(~A, ~E, ~ea, xs, i, d, x, at)
 
-def Laws.patch_insert(A, xs, i, x):
-  insert_split(A, xs, i, x)
-
-def Laws.patch_delete(A, xs, i):
-  remove_split(A, xs, i)
-
-def Laws.patch_set_inside(A, xs, i, x, inside):
-  set_inside(A, xs, i, x, inside)
-
-def Laws.patch_set_outside(A, xs, i, x, outside):
-  set_outside(A, xs, i, x, outside)
-
-def Laws.patch_replace(A, xs, ys):
-  {==}
-
-def Laws.patch_then(A, xs, a, b):
-  {==}
+def Laws.edit_update_outside(A, E, ea, xs, i, d, past):
+  update_outside(~A, ~E, ~ea, xs, i, d, past)
 
 def Laws.map_nil(A, B, f):
   {==}
@@ -149,7 +197,7 @@ law map_insert:
   for xs: List<&2, A>
   for i: Nat
   for x: A
-  {L.map(~A, ~B, ~f, L.insert(A, xs, i, x)) == L.insert(B, L.map(~A, ~B, ~f, xs), i, f(x)) : List<&2, B>}
+  {L.insert(B, L.map(~A, ~B, ~f, xs), i, f(x)) == L.map(~A, ~B, ~f, L.insert(A, xs, i, x)) : List<&2, B>}
 
 def map_insert(A, B, f, xs, i, x):
   match xs i:
@@ -158,7 +206,7 @@ def map_insert(A, B, f, xs, i, x):
     case Con{h, t} 0n:
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, B>, L.map(~A, ~B, ~f, L.insert(A, t, p, x)), L.insert(B, L.map(~A, ~B, ~f, t), p, f(x)), map_insert(~A, ~B, ~f, t, p, x)) : {f(h) <> _ == f(h) <> L.insert(B, L.map(~A, ~B, ~f, t), p, f(x)) : List<&2, B>}
+      %Equal.sym(List<&2, B>, L.insert(B, L.map(~A, ~B, ~f, t), p, f(x)), L.map(~A, ~B, ~f, L.insert(A, t, p, x)), map_insert(~A, ~B, ~f, t, p, x)) : {f(h) <> _ == f(h) <> L.map(~A, ~B, ~f, L.insert(A, t, p, x)) : List<&2, B>}
       {==}
 
 # Lemma: mapping after a delete deletes from the mapped list.
@@ -168,7 +216,7 @@ law map_remove:
   for ~f: A -> B
   for xs: List<&2, A>
   for i: Nat
-  {L.map(~A, ~B, ~f, L.remove(A, xs, i)) == L.remove(B, L.map(~A, ~B, ~f, xs), i) : List<&2, B>}
+  {L.remove(B, L.map(~A, ~B, ~f, xs), i) == L.map(~A, ~B, ~f, L.remove(A, xs, i)) : List<&2, B>}
 
 def map_remove(A, B, f, xs, i):
   match xs i:
@@ -177,88 +225,93 @@ def map_remove(A, B, f, xs, i):
     case Con{h, t} 0n:
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, B>, L.map(~A, ~B, ~f, L.remove(A, t, p)), L.remove(B, L.map(~A, ~B, ~f, t), p), map_remove(~A, ~B, ~f, t, p)) : {f(h) <> _ == f(h) <> L.remove(B, L.map(~A, ~B, ~f, t), p) : List<&2, B>}
+      %Equal.sym(List<&2, B>, L.remove(B, L.map(~A, ~B, ~f, t), p), L.map(~A, ~B, ~f, L.remove(A, t, p)), map_remove(~A, ~B, ~f, t, p)) : {f(h) <> _ == f(h) <> L.map(~A, ~B, ~f, L.remove(A, t, p)) : List<&2, B>}
       {==}
 
-# Lemma: mapping after a set sets the mapped element.
-law map_set:
+# Lemma: mapping after an update updates the mapped element by f's
+# derivative, if that derivative is correct.
+law map_update:
   for ~A: Data
+  for ~E: Data
   for ~B: Data
+  for ~F: Data
+  for ~ea: E -> A -> A
+  for ~eb: F -> B -> B
   for ~f: A -> B
+  for ~df: A -> C.Change<A, E> -> C.Change<B, F>
+  for ~df_ok: (@x: A -> @d: C.Change<A, E> -> {C.apply(~B, ~F, ~eb, df(x, d), f(x)) == f(C.apply(~A, ~E, ~ea, d, x)) : B})
   for xs: List<&2, A>
   for i: Nat
-  for x: A
-  {L.map(~A, ~B, ~f, L.set(A, xs, i, x)) == L.set(B, L.map(~A, ~B, ~f, xs), i, f(x)) : List<&2, B>}
+  for d: C.Change<A, E>
+  {L.update(~B, ~F, ~eb, L.map(~A, ~B, ~f, xs), i, L.map.at(~A, ~E, ~B, ~F, ~df, List.get(&2, A, xs, i), d)) == L.map(~A, ~B, ~f, L.update(~A, ~E, ~ea, xs, i, d)) : List<&2, B>}
 
-def map_set(A, B, f, xs, i, x):
+def map_update(A, E, B, F, ea, eb, f, df, df_ok, xs, i, d):
   match xs i:
     case Nil{} _:
       {==}
     case Con{h, t} 0n:
+      %Equal.sym(B, C.apply(~B, ~F, ~eb, df(h, d), f(h)), f(C.apply(~A, ~E, ~ea, d, h)), df_ok(h, d)) : {_ <> L.map(~A, ~B, ~f, t) == f(C.apply(~A, ~E, ~ea, d, h)) <> L.map(~A, ~B, ~f, t) : List<&2, B>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, B>, L.map(~A, ~B, ~f, L.set(A, t, p, x)), L.set(B, L.map(~A, ~B, ~f, t), p, f(x)), map_set(~A, ~B, ~f, t, p, x)) : {f(h) <> _ == f(h) <> L.set(B, L.map(~A, ~B, ~f, t), p, f(x)) : List<&2, B>}
+      %Equal.sym(List<&2, B>, L.update(~B, ~F, ~eb, L.map(~A, ~B, ~f, t), p, L.map.at(~A, ~E, ~B, ~F, ~df, List.get(&2, A, t, p), d)), L.map(~A, ~B, ~f, L.update(~A, ~E, ~ea, t, p, d)), map_update(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~df, ~df_ok, t, p, d)) : {f(h) <> _ == f(h) <> L.map(~A, ~B, ~f, L.update(~A, ~E, ~ea, t, p, d)) : List<&2, B>}
       {==}
 
-# Lemma, by induction on the change.
-law map_patch:
+# Lemma: map.edit is correct for every single edit, if df is.
+law map_edit_ok:
   for ~A: Data
+  for ~E: Data
   for ~B: Data
+  for ~F: Data
+  for ~ea: E -> A -> A
+  for ~eb: F -> B -> B
   for ~f: A -> B
-  for dx: L.Change<A>
-  for +xs: List<&2, A>
-  {L.map(~A, ~B, ~f, L.patch(A, dx, xs)) == L.patch(B, L.map.change(~A, ~B, ~f, dx), L.map(~A, ~B, ~f, xs)) : List<&2, B>}
+  for ~df: A -> C.Change<A, E> -> C.Change<B, F>
+  for ~df_ok: (@x: A -> @d: C.Change<A, E> -> {C.apply(~B, ~F, ~eb, df(x, d), f(x)) == f(C.apply(~A, ~E, ~ea, d, x)) : B})
+  for xs: List<&2, A>
+  for e: L.Edit<A, E>
+  {L.patch(~B, ~F, ~eb, L.map.edit(~A, ~E, ~B, ~F, ~f, ~df, xs, e), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.edit(~A, ~E, ~ea, e, xs)) : List<&2, B>}
 
-def map_patch(A, B, f, dx, xs):
-  match dx:
-    case L.Keep{}:
-      {==}
+def map_edit_ok(A, E, B, F, ea, eb, f, df, df_ok, xs, e):
+  match e:
     case L.Insert{i, x}:
       map_insert(~A, ~B, ~f, xs, i, x)
     case L.Delete{i}:
       map_remove(~A, ~B, ~f, xs, i)
-    case L.Set{i, x}:
-      map_set(~A, ~B, ~f, xs, i, x)
-    case L.Replace{ys}:
-      {==}
-    case L.Then{+a, b}:
-      %Equal.sym(List<&2, B>, L.map(~A, ~B, ~f, L.patch(A, b, L.patch(A, a, xs))), L.patch(B, L.map.change(~A, ~B, ~f, b), L.map(~A, ~B, ~f, L.patch(A, a, xs))), map_patch(~A, ~B, ~f, b, L.patch(A, a, xs))) : {_ == L.patch(B, L.map.change(~A, ~B, ~f, b), L.patch(B, L.map.change(~A, ~B, ~f, a), L.map(~A, ~B, ~f, xs))) : List<&2, B>}
-      %Equal.sym(List<&2, B>, L.map(~A, ~B, ~f, L.patch(A, a, xs)), L.patch(B, L.map.change(~A, ~B, ~f, a), L.map(~A, ~B, ~f, xs)), map_patch(~A, ~B, ~f, a, xs)) : {L.patch(B, L.map.change(~A, ~B, ~f, b), _) == L.patch(B, L.map.change(~A, ~B, ~f, b), L.patch(B, L.map.change(~A, ~B, ~f, a), L.map(~A, ~B, ~f, xs))) : List<&2, B>}
-      {==}
+    case L.Update{i, d}:
+      map_update(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~df, ~df_ok, xs, i, d)
 
-def Laws.map_change(A, B, f, xs, dx):
-  map_patch(~A, ~B, ~f, dx, xs)
+# The same induction as lift's law. (Lift's law gives this directly, but
+# BendTT, the kernel behind --verdict, can't yet check a law instantiated
+# with functions, so map.change is proved on its own.)
+def Laws.map_change(A, E, B, F, ea, eb, f, df, df_ok, d, xs):
+  match d:
+    case C.Keep{}:
+      {==}
+    case C.Replace{ys}:
+      {==}
+    case C.Edit{e}:
+      map_edit_ok(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~df, ~df_ok, xs, e)
+    case C.Then{+p, q}:
+      %Equal.sym(List<&2, B>, L.patch(~B, ~F, ~eb, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, p, xs), L.map(~A, ~B, ~f, xs)), L.map(~A, ~B, ~f, L.patch(~A, ~E, ~ea, p, xs)), Laws.map_change(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~df, ~df_ok, p, xs)) : {L.patch(~B, ~F, ~eb, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, q, L.patch(~A, ~E, ~ea, p, xs)), _) == L.map(~A, ~B, ~f, L.patch(~A, ~E, ~ea, q, L.patch(~A, ~E, ~ea, p, xs))) : List<&2, B>}
+      Laws.map_change(~A, ~E, ~B, ~F, ~ea, ~eb, ~f, ~df, ~df_ok, q, L.patch(~A, ~E, ~ea, p, xs))
 
-# Lemma: mapping keeps the length.
-law map_length:
-  for ~A: Data
-  for ~B: Data
-  for ~f: A -> B
-  for ys: List<&2, A>
-  {List.length(&2, B, L.map(~A, ~B, ~f, ys)) == List.length(&2, A, ys) : Nat}
-
-def map_length(A, B, f, ys):
-  match ys:
-    case Nil{}:
+# By induction on the change; a single edit maps to an edit of the same
+# kind at the same position.
+def Laws.map_change_local(A, E, B, F, ea, f, df, d, xs):
+  match d:
+    case C.Keep{}:
       {==}
-    case Con{h, t}:
-      %Equal.sym(Nat, List.length(&2, B, L.map(~A, ~B, ~f, t)), List.length(&2, A, t), map_length(~A, ~B, ~f, t)) : {1n+_ == 1n+List.length(&2, A, t) : Nat}
+    case C.Replace{ys}:
       {==}
-
-def Laws.map_change_local(A, B, f, dx):
-  match dx:
-    case L.Keep{}:
-      {==}
-    case L.Insert{i, x}:
-      {==}
-    case L.Delete{i}:
-      {==}
-    case L.Set{i, x}:
-      {==}
-    case L.Replace{ys}:
-      %Equal.sym(Nat, List.length(&2, B, L.map(~A, ~B, ~f, ys)), List.length(&2, A, ys), map_length(~A, ~B, ~f, ys)) : {L.SReplace{_} == L.SReplace{List.length(&2, A, ys)} : L.Shape}
-      {==}
-    case L.Then{a, b}:
-      %Equal.sym(L.Shape, L.shape(B, L.map.change(~A, ~B, ~f, a)), L.shape(A, a), Laws.map_change_local(~A, ~B, ~f, a)) : {L.SThen{_, L.shape(B, L.map.change(~A, ~B, ~f, b))} == L.SThen{L.shape(A, a), L.shape(A, b)} : L.Shape}
-      %Equal.sym(L.Shape, L.shape(B, L.map.change(~A, ~B, ~f, b)), L.shape(A, b), Laws.map_change_local(~A, ~B, ~f, b)) : {L.SThen{L.shape(A, a), _} == L.SThen{L.shape(A, a), L.shape(A, b)} : L.Shape}
+    case C.Edit{e}:
+      match e:
+        case L.Insert{i, x}:
+          {==}
+        case L.Delete{i}:
+          {==}
+        case L.Update{i, u}:
+          {==}
+    case C.Then{+p, q}:
+      %Equal.sym(C.Shape<L.Where>, L.shape(~B, ~F, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, p, xs)), L.shape(~A, ~E, p), Laws.map_change_local(~A, ~E, ~B, ~F, ~ea, ~f, ~df, p, xs)) : {C.SThen{_, L.shape(~B, ~F, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, q, L.patch(~A, ~E, ~ea, p, xs)))} == C.SThen{L.shape(~A, ~E, p), L.shape(~A, ~E, q)} : C.Shape<L.Where>}
+      %Equal.sym(C.Shape<L.Where>, L.shape(~B, ~F, L.map.change(~A, ~E, ~B, ~F, ~ea, ~f, ~df, q, L.patch(~A, ~E, ~ea, p, xs))), L.shape(~A, ~E, q), Laws.map_change_local(~A, ~E, ~B, ~F, ~ea, ~f, ~df, q, L.patch(~A, ~E, ~ea, p, xs))) : {C.SThen{L.shape(~A, ~E, p), _} == C.SThen{L.shape(~A, ~E, p), L.shape(~A, ~E, q)} : C.Shape<L.Where>}
       {==}

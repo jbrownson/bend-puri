@@ -30,13 +30,25 @@ with laws checked by Bend's prover.
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
 
-- `list.bend`: changes to a list (insert, delete, set, replace, one change
-  then another), `patch` to apply one, and `map.change`, the derivative of
-  `map`: the change to a mapped list, from the change to the list alone.
-- `LAWS.bend`: what applying each change returns, and the two laws of
-  `map.change`: it is correct, and it touches exactly the positions the
-  change touched.
+- `change.bend`: changes to any value. A type supplies its own edits;
+  `Change` adds what every type has: no change, starting over with a new
+  value, and one change then another. `lift` builds a derivative from one
+  that handles single edits.
+- `list.bend`: a list's edits (insert, delete, and update an element in
+  place by the element's own change), `patch` to apply a change, and
+  `map.change`, the derivative of `map`.
+- `LAWS.bend`: what applying each change returns; that a derivative lifted
+  from correct single-edit derivatives is correct; and the two laws of
+  `map.change`: it is correct (given a correct derivative for the mapped
+  function), and it acts exactly where the change acts.
 - `PROOF.bend`: their proofs.
+
+The approach follows Phil Freeman's
+[Purview](https://github.com/paf31/purescript-purview), a PureScript UI
+library built on ILC, and his
+[purescript-incremental-functions](https://github.com/paf31/purescript-incremental-functions),
+from the theory in Cai, Giarrusso, Rendel and Ostermann, ["A Theory of
+Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
 
 `raster/`, the backend:
 
@@ -78,7 +90,7 @@ content hash, so `bend` fetches exactly that code on first use and checks it:
 ```sh
 bend puri/PROOF.bend          # ALL PROOFS CHECK when every law holds
 bend raster/PROOF.bend        # the raster law
-bend ilc/PROOF.bend           # the list changes and map's derivative
+bend ilc/PROOF.bend           # changes, and map's derivative
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
