@@ -28,8 +28,8 @@ with laws checked by Bend's prover.
 
 `examples/`:
 
-- `counter.bend`: combining two handlers, with a state transition as the
-  action type.
+- `counter.bend`: combining two handlers whose actions are state steps,
+  composed with `do` inside a handler. Puri only sees the plain action type.
 - `hover.bend`: overlapping boxes and an occluding panel, printing each
   frame's painting.
 - `app.bend`: an interactive window: boxes you can hover and click to
