@@ -74,6 +74,54 @@ law then_assoc:
   for a: A
   {C.apply(~A, ~E, ~edit, C.Then{C.Then{p, q}, r}, a) == C.apply(~A, ~E, ~edit, C.Then{p, C.Then{q, r}}, a) : A}
 
+# Mapping a change
+# ----------------
+# C.map(fa, fe, d) maps d's new values by fa and its edits by fe.
+
+# LAW: mapping keeping keeps.
+law map_keep:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~fa: A -> B
+  for ~fe: EA -> EB
+  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Keep{}) == C.Keep{} : C.Change<B, EB>}
+
+# LAW: mapping a replacement maps the new value.
+law map_replace:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~fa: A -> B
+  for ~fe: EA -> EB
+  for x: A
+  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Replace{x}) == C.Replace{fa(x)} : C.Change<B, EB>}
+
+# LAW: mapping an edit maps the edit.
+law map_edit:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~fa: A -> B
+  for ~fe: EA -> EB
+  for e: EA
+  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Edit{e}) == C.Edit{fe(e)} : C.Change<B, EB>}
+
+# LAW: mapping one change then another maps each, in the same order.
+law map_then:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~fa: A -> B
+  for ~fe: EA -> EB
+  for p: C.Change<A, EA>
+  for q: C.Change<A, EA>
+  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Then{p, q}) == C.Then{C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, p), C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, q)} : C.Change<B, EB>}
+
 # Derivatives
 # -----------
 # A derivative of f: A -> B takes a value and its change, and gives the

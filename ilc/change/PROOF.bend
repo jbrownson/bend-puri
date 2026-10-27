@@ -26,6 +26,21 @@ def Laws.then_keep_right(A, E, edit, p, a):
 def Laws.then_assoc(A, E, edit, p, q, r, a):
   {==}
 
+# Mapping a change
+# ----------------
+
+def Laws.map_keep(A, EA, B, EB, fa, fe):
+  {==}
+
+def Laws.map_replace(A, EA, B, EB, fa, fe, x):
+  {==}
+
+def Laws.map_edit(A, EA, B, EB, fa, fe, e):
+  {==}
+
+def Laws.map_then(A, EA, B, EB, fa, fe, p, q):
+  {==}
+
 # Derivatives
 # -----------
 

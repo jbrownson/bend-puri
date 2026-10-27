@@ -50,21 +50,16 @@ def recompute(~A: Data, ~DA: Data, ~B: Data, ~EB: Data, ~pa: DA -> A -> A, ~f: A
   a: A, d: DA) -> Change<B, EB>:
   Replace{f(pa(d, a))}
 
-# Where a change acts, with its values left out. S says where one edit
-# acts.
-type Shape<-S: Data> is Data:
-  SKeep{}
-  SReplace{}
-  SEdit{s: S}
-  SThen{first: Shape<S>, next: Shape<S>}
-
-def shape(~A: Data, ~E: Data, ~S: Data, ~at: E -> S, d: Change<A, E>) -> Shape<S>:
+# A change with its values mapped by fa and its edits by fe: the same
+# changes, in the same order.
+def map(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~fa: A -> B, ~fe: EA -> EB,
+  d: Change<A, EA>) -> Change<B, EB>:
   match d:
     case Keep{}:
-      SKeep{}
+      Keep{}
     case Replace{x}:
-      SReplace{}
+      Replace{fa(x)}
     case Edit{e}:
-      SEdit{at(e)}
+      Edit{fe(e)}
     case Then{p, q}:
-      SThen{shape(~A, ~E, ~S, ~at, p), shape(~A, ~E, ~S, ~at, q)}
+      Then{map(~A, ~EA, ~B, ~EB, ~fa, ~fe, p), map(~A, ~EA, ~B, ~EB, ~fa, ~fe, q)}

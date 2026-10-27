@@ -91,21 +91,18 @@ def map.change(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~pa: DA -> A -> A, ~f: 
   C.lift(~List<&2, A>, ~Edit<A, DA>, ~List<&2, B>, ~Edit<B, DB>, ~(e => ys => edit(~A, ~DA, ~pa, e, ys)),
     ~(ys => map(~A, ~B, ~f, ys)), ~(ys => e => map.edit(~A, ~DA, ~B, ~DB, ~f, ~df, ~kb, ys, e)), d, xs)
 
-# Where one edit acts.
-type Where is Data:
-  AtInsert{at: Nat}
-  AtDelete{at: Nat}
-  AtUpdate{at: Nat}
-
-def place(~A: Data, ~DA: Data, e: Edit<A, DA>) -> Where:
+# An edit with its element mapped by fa and its element change by fd.
+def Edit.map(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~fa: A -> B, ~fd: DA -> DB,
+  e: Edit<A, DA>) -> Edit<B, DB>:
   match e:
     case Insert{i, x}:
-      AtInsert{i}
+      Insert{i, fa(x)}
     case Delete{i}:
-      AtDelete{i}
+      Delete{i}
     case Update{i, d}:
-      AtUpdate{i}
+      Update{i, fd(d)}
 
-# Where a list change acts.
-def shape(~A: Data, ~DA: Data, d: C.Change<List<&2, A>, Edit<A, DA>>) -> C.Shape<Where>:
-  C.shape(~List<&2, A>, ~Edit<A, DA>, ~Where, ~(e => place(~A, ~DA, e)), d)
+# Where a list change acts: the change with every value replaced by s.
+def shape(~A: Data, ~DA: Data, ~S: Data, ~s: S, d: C.Change<List<&2, A>, Edit<A, DA>>) -> C.Change<S, Edit<S, S>>:
+  C.map(~List<&2, A>, ~Edit<A, DA>, ~S, ~Edit<S, S>, ~(xs => s),
+    ~(e => Edit.map(~A, ~DA, ~S, ~S, ~(x => s), ~(u => s), e)), d)

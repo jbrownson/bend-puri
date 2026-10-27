@@ -65,6 +65,41 @@ law edit_update_outside:
   for past: {List.get(&2, A, xs, i) == None{} : Maybe<&2, A>}
   {L.edit(~A, ~DA, ~pa, L.Update{i, d}, xs) == xs : List<&2, A>}
 
+# LAW: mapping an insert maps the inserted element.
+law edit_map_insert:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~fa: A -> B
+  for ~fd: DA -> DB
+  for i: Nat
+  for x: A
+  {L.Edit.map(~A, ~DA, ~B, ~DB, ~fa, ~fd, L.Insert{i, x}) == L.Insert{i, fa(x)} : L.Edit<B, DB>}
+
+# LAW: mapping a delete leaves it as it is.
+law edit_map_delete:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~fa: A -> B
+  for ~fd: DA -> DB
+  for i: Nat
+  {L.Edit.map(~A, ~DA, ~B, ~DB, ~fa, ~fd, L.Delete{i}) == L.Delete{i} : L.Edit<B, DB>}
+
+# LAW: mapping an update maps the element's change.
+law edit_map_update:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~fa: A -> B
+  for ~fd: DA -> DB
+  for i: Nat
+  for d: DA
+  {L.Edit.map(~A, ~DA, ~B, ~DB, ~fa, ~fd, L.Update{i, d}) == L.Update{i, fd(d)} : L.Edit<B, DB>}
+
 # Mapping
 # -------
 
@@ -107,7 +142,18 @@ law map_change:
   for +xs: List<&2, A>
   {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, d, xs)) : List<&2, B>}
 
-# LAW: map.change is local: it acts exactly where the change acts.
+# LAW: a list change's shape is the change with every value replaced by s,
+# a stand-in of any type S: what remains is each edit's kind and position.
+law shape:
+  for ~A: Data
+  for ~DA: Data
+  for ~S: Data
+  for ~s: S
+  for d: C.Change<List<&2, A>, L.Edit<A, DA>>
+  {L.shape(~A, ~DA, ~S, ~s, d) == C.map(~List<&2, A>, ~L.Edit<A, DA>, ~S, ~L.Edit<S, S>, ~(xs => s), ~(e => L.Edit.map(~A, ~DA, ~S, ~S, ~(x => s), ~(u => s), e)), d) : C.Change<S, L.Edit<S, S>>}
+
+# LAW: map.change is local: it acts exactly where the change acts, whatever
+# stands in for the values.
 law map_change_local:
   for ~A: Data
   for ~DA: Data
@@ -117,6 +163,8 @@ law map_change_local:
   for ~f: A -> B
   for ~df: A -> DA -> DB
   for ~kb: DB
+  for ~S: Data
+  for ~s: S
   for d: C.Change<List<&2, A>, L.Edit<A, DA>>
   for +xs: List<&2, A>
-  {L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, d) : C.Shape<L.Where>}
+  {L.shape(~B, ~DB, ~S, ~s, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, ~S, ~s, d) : C.Change<S, L.Edit<S, S>>}
