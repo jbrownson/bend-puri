@@ -16,6 +16,8 @@ with laws checked by Bend's prover.
   The caller chooses the action type: a state transition, an effectful
   command, or anything else.
 - `geom.bend`: points and rectangles, with signed 32-bit coordinates.
+- `order.bend`: transitivity of `I32`'s order, proved from the packages
+  below.
 - `frame.bend`: what one placement produces: a handler, a hover probe, and
   deferred ink. `Frame.present` runs a frame's phases in order: it resolves
   hover from the settled probes, then paints with that answer.
@@ -32,10 +34,10 @@ with laws checked by Bend's prover.
   it, or the background. It also states four geometric facts about `I32`
   coordinates that the proof assumes.
 - `LAWS.bend`: every pixel of a rasterized window is the spec's color, given
-  the four facts. They are template clauses, so the law reads "for any proof
-  of these facts"; Base has no lemmas about `U32` order or addition to prove
-  them from yet.
-- `PROOF.bend`: the proof.
+  two of the facts, `Fact.unit` and `Fact.quarter`. They are template
+  clauses, so the law reads "for any proof of these facts".
+- `PROOF.bend`: the proof, including proofs of the other two facts,
+  `Fact.meet` and `Fact.cover`.
 - `raster_test.bend`: compares every pixel of a few scenes against the spec,
   and tries the four facts on every combination of edge-case values.
 
@@ -56,6 +58,9 @@ Packages from [BendHub](https://hub.bend-lang.com/packages), imported by
 content hash, so `bend` fetches exactly that code on first use and checks it:
 
 - `bend-kit-int` (`0x4eed9d7a…`): the `I32` used for coordinates.
+- `bend-kit-lemmas` (`0x917f5ed7…`): proved laws relating `U32` arithmetic and
+  order to `Nat`.
+- `bend-mathlib` 0.7.4.0 (`0xcdaf59a0…`): proved lemmas about `Nat` and `Bool`.
 
 ## Running
 

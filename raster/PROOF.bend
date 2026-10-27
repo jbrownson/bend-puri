@@ -3,6 +3,8 @@ import 0x4eed9d7ac6ece61523d747a9d804e4f0/int.bend as I
 import ../puri/geom.bend as G
 import ./raster.bend as R
 import ./spec.bend as S
+import ../puri/order.bend as O
+import 0xcdaf59a0332a2e0cdb289bf7a32fba62/bool.bend as B
 import ./LAWS.bend as Laws
 
 def Bool.holds(b: Bool) -> Type:
@@ -20,6 +22,133 @@ law clash:
 def clash(e):
   %Equal.sym(Bool, False{}, True{}, e) : Bool.holds(_)
   Unit{}
+
+# Helpers: the four tests of a rectangle check, as one Bool.and of two pairs.
+law part1:
+  for +a: Bool
+  for +b: Bool
+  for +c: Bool
+  for +d: Bool
+  for e: {Bool.and(Bool.and(a, b), Bool.and(c, d)) == True{} : Bool}
+  {a == True{} : Bool}
+
+def part1(a, b, c, d, e):
+  B.eq_true_of_and_left(a, b, B.eq_true_of_and_left(Bool.and(a, b), Bool.and(c, d), e))
+
+law part2:
+  for +a: Bool
+  for +b: Bool
+  for +c: Bool
+  for +d: Bool
+  for e: {Bool.and(Bool.and(a, b), Bool.and(c, d)) == True{} : Bool}
+  {b == True{} : Bool}
+
+def part2(a, b, c, d, e):
+  B.eq_true_of_and_right(a, b, B.eq_true_of_and_left(Bool.and(a, b), Bool.and(c, d), e))
+
+law part3:
+  for +a: Bool
+  for +b: Bool
+  for +c: Bool
+  for +d: Bool
+  for e: {Bool.and(Bool.and(a, b), Bool.and(c, d)) == True{} : Bool}
+  {c == True{} : Bool}
+
+def part3(a, b, c, d, e):
+  B.eq_true_of_and_left(c, d, B.eq_true_of_and_right(Bool.and(a, b), Bool.and(c, d), e))
+
+law part4:
+  for +a: Bool
+  for +b: Bool
+  for +c: Bool
+  for +d: Bool
+  for e: {Bool.and(Bool.and(a, b), Bool.and(c, d)) == True{} : Bool}
+  {d == True{} : Bool}
+
+def part4(a, b, c, d, e):
+  B.eq_true_of_and_right(c, d, B.eq_true_of_and_right(Bool.and(a, b), Bool.and(c, d), e))
+
+law all4:
+  for +a: Bool
+  for +b: Bool
+  for +c: Bool
+  for +d: Bool
+  for ea: {a == True{} : Bool}
+  for eb: {b == True{} : Bool}
+  for ec: {c == True{} : Bool}
+  for ed: {d == True{} : Bool}
+  {Bool.and(Bool.and(a, b), Bool.and(c, d)) == True{} : Bool}
+
+def all4(a, b, c, d, ea, eb, ec, ed):
+  B.and_eq_true(Bool.and(a, b), Bool.and(c, d), B.and_eq_true(a, b, ea, eb), B.and_eq_true(c, d, ec, ed))
+
+# Fact.meet, proved: a rectangle that contains a point inside a square
+# meets the square, one axis at a time by transitivity.
+law fact_meet:
+  for r: G.Rect
+  for p: G.Point
+  for x0: I.I32
+  for y0: I.I32
+  for s: I.I32
+  for hc: {G.Rect.contains(r, p) == True{} : Bool}
+  for hi: {G.Rect.contains(G.Rect{x0, y0, s, s}, p) == True{} : Bool}
+  {R.meets(r, x0, y0, s) == True{} : Bool}
+
+def fact_meet(r, p, x0, y0, s, hc, hi):
+  match r p:
+    case G.Rect{+x, +y, +w, +h} G.Point{+px, +py}:
+      +X = x0
+      +Y = y0
+      +S = s
+      +C = hc
+      +H = hi
+      all4((x < X + S : I.I32), (X < x + w : I.I32), (y < Y + S : I.I32), (Y < y + h : I.I32),
+        O.le_lt(x, px, (X + S : I.I32),
+          part1((x <= px : I.I32), (px < x + w : I.I32), (y <= py : I.I32), (py < y + h : I.I32), C),
+          part2((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H)),
+        O.le_lt(X, px, (x + w : I.I32),
+          part1((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H),
+          part2((x <= px : I.I32), (px < x + w : I.I32), (y <= py : I.I32), (py < y + h : I.I32), C)),
+        O.le_lt(y, py, (Y + S : I.I32),
+          part3((x <= px : I.I32), (px < x + w : I.I32), (y <= py : I.I32), (py < y + h : I.I32), C),
+          part4((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H)),
+        O.le_lt(Y, py, (y + h : I.I32),
+          part3((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H),
+          part4((x <= px : I.I32), (px < x + w : I.I32), (y <= py : I.I32), (py < y + h : I.I32), C)))
+
+# Fact.cover, proved: a rectangle that covers a square contains every point
+# inside it, one axis at a time by transitivity.
+law fact_cover:
+  for r: G.Rect
+  for p: G.Point
+  for x0: I.I32
+  for y0: I.I32
+  for s: I.I32
+  for hv: {R.covers(r, x0, y0, s) == True{} : Bool}
+  for hi: {G.Rect.contains(G.Rect{x0, y0, s, s}, p) == True{} : Bool}
+  {G.Rect.contains(r, p) == True{} : Bool}
+
+def fact_cover(r, p, x0, y0, s, hv, hi):
+  match r p:
+    case G.Rect{+x, +y, +w, +h} G.Point{+px, +py}:
+      +X = x0
+      +Y = y0
+      +S = s
+      +V = hv
+      +H = hi
+      all4((x <= px : I.I32), (px < x + w : I.I32), (y <= py : I.I32), (py < y + h : I.I32),
+        O.le_le(x, X, px,
+          part1((x <= X : I.I32), (X + S <= x + w : I.I32), (y <= Y : I.I32), (Y + S <= y + h : I.I32), V),
+          part1((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H)),
+        O.lt_le(px, (X + S : I.I32), (x + w : I.I32),
+          part2((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H),
+          part2((x <= X : I.I32), (X + S <= x + w : I.I32), (y <= Y : I.I32), (Y + S <= y + h : I.I32), V)),
+        O.le_le(y, Y, py,
+          part3((x <= X : I.I32), (X + S <= x + w : I.I32), (y <= Y : I.I32), (Y + S <= y + h : I.I32), V),
+          part3((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H)),
+        O.lt_le(py, (Y + S : I.I32), (y + h : I.I32),
+          part4((X <= px : I.I32), (px < X + S : I.I32), (Y <= py : I.I32), (py < Y + S : I.I32), H),
+          part4((x <= X : I.I32), (X + S <= x + w : I.I32), (y <= Y : I.I32), (Y + S <= y + h : I.I32), V)))
 
 # Helper: one command's step of keep, with its three tests as parameters.
 law keep_step:
@@ -276,10 +405,10 @@ def raster_color(meet, cover, unit, quarter, d, cell, kept, x0, y0, bg, p, ec, i
             c => k => x => y => ec2 => ins => raster_color(~meet, ~cover, ~unit, ~quarter, e, c, k, x, y, bg, G.Point{px, py}, ec2, ins))
 
 # The window is the root cell, holding the commands kept for it, top first.
-def Laws.image_pixels(meet, cover, unit, quarter, d, cmds, bg, p, inside):
+def Laws.image_pixels(unit, quarter, d, cmds, bg, p, inside):
   Equal.trans(U32,
     S.Spec.pixel(d, R.raster(d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg), G.int(0), G.int(0), p),
     S.Spec.color(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), p, bg),
     S.Spec.color(List.reverse(&2, R.Draw, cmds), p, bg),
-    raster_color(~meet, ~cover, ~unit, ~quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg, p, {==}, inside),
-    keep_color(~meet, ~cover, List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d), p, bg, inside))
+    raster_color(~fact_meet, ~fact_cover, ~unit, ~quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg, p, {==}, inside),
+    keep_color(~fact_meet, ~fact_cover, List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d), p, bg, inside))
