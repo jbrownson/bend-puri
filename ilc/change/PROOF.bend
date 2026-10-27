@@ -5,25 +5,25 @@ import ./LAWS.bend as Laws
 # Changes to any value
 # --------------------
 
-def Laws.apply_keep(A, E, edit, a):
+def Laws.apply_keep(A, E, ea, a):
   {==}
 
-def Laws.apply_replace(A, E, edit, x, a):
+def Laws.apply_replace(A, E, ea, x, a):
   {==}
 
-def Laws.apply_edit(A, E, edit, e, a):
+def Laws.apply_edit(A, E, ea, e, a):
   {==}
 
-def Laws.apply_then(A, E, edit, p, q, a):
+def Laws.apply_then(A, E, ea, p, q, a):
   {==}
 
-def Laws.then_keep_left(A, E, edit, q, a):
+def Laws.then_keep_left(A, E, ea, q, a):
   {==}
 
-def Laws.then_keep_right(A, E, edit, p, a):
+def Laws.then_keep_right(A, E, ea, p, a):
   {==}
 
-def Laws.then_assoc(A, E, edit, p, q, r, a):
+def Laws.then_assoc(A, E, ea, p, q, r, a):
   {==}
 
 # Mapping a change
@@ -57,6 +57,18 @@ def Laws.inc_ok(A, DA, B, DB, pa, pb, g):
 # -------
 
 def Laws.lift(A, EA, B, EB, ea, g):
+  {==}
+
+def Laws.lift_keep(A, EA, B, EB, ea, g, a):
+  {==}
+
+def Laws.lift_replace(A, EA, B, EB, ea, g, x, a):
+  {==}
+
+def Laws.lift_edit(A, EA, B, EB, ea, g, e, a):
+  {==}
+
+def Laws.lift_then(A, EA, B, EB, ea, g, p, q, a):
   {==}
 
 # Lemma: lift's derivative is correct at every change, if g's is at every

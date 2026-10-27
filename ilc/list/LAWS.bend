@@ -147,6 +147,108 @@ law map_inc:
   for ~kb: DB
   {L.map.inc(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb) == C.Inc{xs => L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), xs => d => L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, d, xs)} : C.Inc<List<&2, A>, L.Change(A, DA), List<&2, B>, L.Change(B, DB)>}
 
+# LAW: keeping the list keeps the mapped list.
+law dmap_keep:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for xs: List<&2, A>
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Keep{}, xs) == C.Keep{} : L.Change(B, DB)}
+
+# LAW: replacing the list replaces the mapped list, with the new list
+# mapped.
+law dmap_replace:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for ys: List<&2, A>
+  for xs: List<&2, A>
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Replace{ys}, xs) == C.Replace{L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys)} : L.Change(B, DB)}
+
+# LAW: inserting x inserts its image at the same position.
+law dmap_insert:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for i: Nat
+  for x: A
+  for xs: List<&2, A>
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Edit{L.Insert{i, x}}, xs) == C.Edit{L.Insert{i, C.Inc.f(A, DA, B, DB, g)(x)}} : L.Change(B, DB)}
+
+# LAW: deleting deletes at the same position.
+law dmap_delete:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for i: Nat
+  for xs: List<&2, A>
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Edit{L.Delete{i}}, xs) == C.Edit{L.Delete{i}} : L.Change(B, DB)}
+
+# LAW: updating the element x at i updates its image at i, by g's
+# derivative.
+law dmap_update_inside:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for xs: List<&2, A>
+  for i: Nat
+  for d: DA
+  for x: A
+  for at: {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Edit{L.Update{i, d}}, xs) == C.Edit{L.Update{i, C.Inc.df(A, DA, B, DB, g)(x, d)}} : L.Change(B, DB)}
+
+# LAW: updating past the end updates past the end too, carrying kb.
+law dmap_update_outside:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for xs: List<&2, A>
+  for i: Nat
+  for d: DA
+  for past: {List.get(&2, A, xs, i) == None{} : Maybe<&2, A>}
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Edit{L.Update{i, d}}, xs) == C.Edit{L.Update{i, kb}} : L.Change(B, DB)}
+
+# LAW: one change then another maps the second from the list the first
+# produced.
+law dmap_then:
+  for ~A: Data
+  for ~DA: Data
+  for ~B: Data
+  for ~DB: Data
+  for ~pa: DA -> A -> A
+  for ~g: C.Inc<A, DA, B, DB>
+  for ~kb: DB
+  for p: L.Change(A, DA)
+  for q: L.Change(A, DA)
+  for +xs: List<&2, A>
+  {L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, C.Then{p, q}, xs) == C.Then{L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, p, xs), L.dmap(~A, ~DA, ~B, ~DB, ~pa, ~g, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))} : L.Change(B, DB)}
+
+# It follows that:
+
 # LAW: map.inc(g) is correct, if g is.
 law map_inc_ok:
   for ~A: Data

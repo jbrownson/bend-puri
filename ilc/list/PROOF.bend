@@ -253,6 +253,29 @@ def map_edit_ok(A, DA, B, DB, pa, pb, g, kb, g_ok, xs, e):
 def Laws.map_inc(A, DA, B, DB, pa, g, kb):
   {==}
 
+def Laws.dmap_keep(A, DA, B, DB, pa, g, kb, xs):
+  {==}
+
+def Laws.dmap_replace(A, DA, B, DB, pa, g, kb, ys, xs):
+  {==}
+
+def Laws.dmap_insert(A, DA, B, DB, pa, g, kb, i, x, xs):
+  {==}
+
+def Laws.dmap_delete(A, DA, B, DB, pa, g, kb, i, xs):
+  {==}
+
+def Laws.dmap_update_inside(A, DA, B, DB, pa, g, kb, xs, i, d, x, at):
+  %Equal.sym(Maybe<&2, A>, List.get(&2, A, xs, i), Some{x}, at) : {C.Edit{L.Update{i, L.map.at(~A, ~DA, ~B, ~DB, ~g, ~kb, _, d)}} == C.Edit{L.Update{i, C.Inc.df(A, DA, B, DB, g)(x, d)}} : L.Change(B, DB)}
+  {==}
+
+def Laws.dmap_update_outside(A, DA, B, DB, pa, g, kb, xs, i, d, past):
+  %Equal.sym(Maybe<&2, A>, List.get(&2, A, xs, i), None{}, past) : {C.Edit{L.Update{i, L.map.at(~A, ~DA, ~B, ~DB, ~g, ~kb, _, d)}} == C.Edit{L.Update{i, kb}} : L.Change(B, DB)}
+  {==}
+
+def Laws.dmap_then(A, DA, B, DB, pa, g, kb, p, q, xs):
+  {==}
+
 # map.inc(g) is lift applied to map.edit, so lift's law gives it.
 def Laws.map_inc_ok(A, DA, B, DB, pa, pb, g, kb, g_ok):
   CL.lift_ok(~List<&2, A>, ~L.Edit<A, DA>, ~List<&2, B>, ~L.Edit<B, DB>, ~(e => ys => L.edit(~A, ~DA, ~pa, e, ys)), ~(e => ys => L.edit(~B, ~DB, ~pb, e, ys)),

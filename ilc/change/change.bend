@@ -17,16 +17,16 @@ def Whole.apply(~A: Data, e: Whole, a: A) -> A:
   match e:
 
 # The value after a change, given how to apply one edit.
-def apply(~A: Data, ~E: Data, ~edit: E -> A -> A, d: Change<A, E>, a: A) -> A:
+def apply(~A: Data, ~E: Data, ~ea: E -> A -> A, d: Change<A, E>, a: A) -> A:
   match d:
     case Keep{}:
       a
     case Replace{x}:
       x
     case Edit{e}:
-      edit(e, a)
+      ea(e, a)
     case Then{p, q}:
-      apply(~A, ~E, ~edit, q, apply(~A, ~E, ~edit, p, a))
+      apply(~A, ~E, ~ea, q, apply(~A, ~E, ~ea, p, a))
 
 # An incremental function: a function f, and its derivative df, which
 # gives the change to f's result from a value and the value's change.

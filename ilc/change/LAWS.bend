@@ -5,43 +5,43 @@ import ./change.bend as C
 
 # Changes to any value
 # --------------------
-# A type supplies its edits E and `edit`, how to apply one.
+# A type supplies its edits E and `ea`, how to apply one.
 
 # LAW: keeping changes nothing.
 law apply_keep:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Keep{}, a) == a : A}
+  {C.apply(~A, ~E, ~ea, C.Keep{}, a) == a : A}
 
 # LAW: replacing gives the new value.
 law apply_replace:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for x: A
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Replace{x}, a) == x : A}
+  {C.apply(~A, ~E, ~ea, C.Replace{x}, a) == x : A}
 
-# LAW: an edit is applied by `edit`.
+# LAW: an edit is applied by `ea`.
 law apply_edit:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for e: E
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Edit{e}, a) == edit(e, a) : A}
+  {C.apply(~A, ~E, ~ea, C.Edit{e}, a) == ea(e, a) : A}
 
 # LAW: one change then another applies the first, then the second.
 law apply_then:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for p: C.Change<A, E>
   for q: C.Change<A, E>
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Then{p, q}, a) == C.apply(~A, ~E, ~edit, q, C.apply(~A, ~E, ~edit, p, a)) : A}
+  {C.apply(~A, ~E, ~ea, C.Then{p, q}, a) == C.apply(~A, ~E, ~ea, q, C.apply(~A, ~E, ~ea, p, a)) : A}
 
 # It follows that:
 
@@ -49,30 +49,30 @@ law apply_then:
 law then_keep_left:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for q: C.Change<A, E>
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Then{C.Keep{}, q}, a) == C.apply(~A, ~E, ~edit, q, a) : A}
+  {C.apply(~A, ~E, ~ea, C.Then{C.Keep{}, q}, a) == C.apply(~A, ~E, ~ea, q, a) : A}
 
 # LAW: keeping last does nothing.
 law then_keep_right:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for p: C.Change<A, E>
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Then{p, C.Keep{}}, a) == C.apply(~A, ~E, ~edit, p, a) : A}
+  {C.apply(~A, ~E, ~ea, C.Then{p, C.Keep{}}, a) == C.apply(~A, ~E, ~ea, p, a) : A}
 
 # LAW: grouping doesn't matter.
 law then_assoc:
   for ~A: Data
   for ~E: Data
-  for ~edit: E -> A -> A
+  for ~ea: E -> A -> A
   for p: C.Change<A, E>
   for q: C.Change<A, E>
   for r: C.Change<A, E>
   for a: A
-  {C.apply(~A, ~E, ~edit, C.Then{C.Then{p, q}, r}, a) == C.apply(~A, ~E, ~edit, C.Then{p, C.Then{q, r}}, a) : A}
+  {C.apply(~A, ~E, ~ea, C.Then{C.Then{p, q}, r}, a) == C.apply(~A, ~E, ~ea, C.Then{p, C.Then{q, r}}, a) : A}
 
 # Mapping a change
 # ----------------
@@ -165,9 +165,7 @@ law inc_ok:
 # lift turns g, whose derivative handles one edit of A, applied by `ea`,
 # into an Inc whose derivative handles any change.
 
-# LAW: lift(g) has g's function, and lift.df for its derivative: one edit
-# gives g's change, a replacement replaces the result, and one change then
-# another lifts the second from the value the first produced.
+# LAW: lift(g) has g's function, and lift.df for its derivative.
 law lift:
   for ~A: Data
   for ~EA: Data
@@ -176,6 +174,57 @@ law lift:
   for ~ea: EA -> A -> A
   for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
   {C.lift(~A, ~EA, ~B, ~EB, ~ea, ~g) == C.Inc{C.Inc.f(A, EA, B, C.Change<B, EB>, g), a => d => C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, d, a)} : C.Inc<A, C.Change<A, EA>, B, C.Change<B, EB>>}
+
+# LAW: keeping the input keeps the result.
+law lift_keep:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  for a: A
+  {C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, C.Keep{}, a) == C.Keep{} : C.Change<B, EB>}
+
+# LAW: replacing the input replaces the result, with f of the new value.
+law lift_replace:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  for x: A
+  for a: A
+  {C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, C.Replace{x}, a) == C.Replace{C.Inc.f(A, EA, B, C.Change<B, EB>, g)(x)} : C.Change<B, EB>}
+
+# LAW: one edit gives g's change.
+law lift_edit:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  for e: EA
+  for a: A
+  {C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, C.Edit{e}, a) == C.Inc.df(A, EA, B, C.Change<B, EB>, g)(a, e) : C.Change<B, EB>}
+
+# LAW: one change then another lifts the second from the value the first
+# produced.
+law lift_then:
+  for ~A: Data
+  for ~EA: Data
+  for ~B: Data
+  for ~EB: Data
+  for ~ea: EA -> A -> A
+  for ~g: C.Inc<A, EA, B, C.Change<B, EB>>
+  for p: C.Change<A, EA>
+  for q: C.Change<A, EA>
+  for +a: A
+  {C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, C.Then{p, q}, a) == C.Then{C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, p, a), C.lift.df(~A, ~EA, ~B, ~EB, ~ea, ~g, q, C.apply(~A, ~EA, ~ea, p, a))} : C.Change<B, EB>}
+
+# It follows that:
 
 # LAW: lift(g) is correct for every change, if g is correct for every
 # single edit.
