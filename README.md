@@ -27,6 +27,17 @@ with laws checked by Bend's prover.
   returns, case by case, so reading them is enough to know what it does.
 - `PROOF.bend`: their proofs.
 
+`ilc/`, incremental computation (ILC: compute a result's change from the
+input's change instead of recomputing it):
+
+- `list.bend`: changes to a list (insert, delete, set, replace, one change
+  then another), `patch` to apply one, and `map.change`, the derivative of
+  `map`: the change to a mapped list, from the change to the list alone.
+- `LAWS.bend`: what applying each change returns, and the two laws of
+  `map.change`: it is correct, and it touches exactly the positions the
+  change touched.
+- `PROOF.bend`: their proofs.
+
 `raster/`, the backend:
 
 - `raster.bend`: turns fill commands into the `Image` quadtree a Bend window
@@ -67,6 +78,7 @@ content hash, so `bend` fetches exactly that code on first use and checks it:
 ```sh
 bend puri/PROOF.bend          # ALL PROOFS CHECK when every law holds
 bend raster/PROOF.bend        # the raster law
+bend ilc/PROOF.bend           # the list changes and map's derivative
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
@@ -75,7 +87,7 @@ bend raster/raster_test.bend  # checks pixels and the geometric facts
 
 `bend <file> --verdict` checks a proof a second time with Bend's BendTT
 kernel, which has its own proof in Lean, and confirms nothing relies on
-`@unsafe` or foreign code. Both `PROOF.bend` files pass it. It needs Lean
+`@unsafe` or foreign code. All three `PROOF.bend` files pass it. It needs Lean
 4.34.0 (the elan toolchain `leanprover/lean4:v4.34.0`) to build the kernel
 on first use.
 
