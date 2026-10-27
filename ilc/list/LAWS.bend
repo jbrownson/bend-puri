@@ -142,18 +142,15 @@ law map_change:
   for +xs: List<&2, A>
   {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs), L.map(~A, ~B, ~f, xs)) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, d, xs)) : List<&2, B>}
 
-# LAW: a list change's shape is the change with every value replaced by s,
-# a stand-in of any type S: what remains is each edit's kind and position.
+# LAW: a list change's shape is the change with every value replaced by
+# Unit{}: what remains is each edit's kind and position.
 law shape:
   for ~A: Data
   for ~DA: Data
-  for ~S: Data
-  for ~s: S
   for d: C.Change<List<&2, A>, L.Edit<A, DA>>
-  {L.shape(~A, ~DA, ~S, ~s, d) == C.map(~List<&2, A>, ~L.Edit<A, DA>, ~S, ~L.Edit<S, S>, ~(xs => s), ~(e => L.Edit.map(~A, ~DA, ~S, ~S, ~(x => s), ~(u => s), e)), d) : C.Change<S, L.Edit<S, S>>}
+  {L.shape(~A, ~DA, d) == C.map(~List<&2, A>, ~L.Edit<A, DA>, ~Unit, ~L.Edit<Unit, Unit>, ~(xs => Unit{}), ~(e => L.Edit.map(~A, ~DA, ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d) : C.Change<Unit, L.Edit<Unit, Unit>>}
 
-# LAW: map.change is local: it acts exactly where the change acts, whatever
-# stands in for the values.
+# LAW: map.change is local: it acts exactly where the change acts.
 law map_change_local:
   for ~A: Data
   for ~DA: Data
@@ -163,8 +160,6 @@ law map_change_local:
   for ~f: A -> B
   for ~df: A -> DA -> DB
   for ~kb: DB
-  for ~S: Data
-  for ~s: S
   for d: C.Change<List<&2, A>, L.Edit<A, DA>>
   for +xs: List<&2, A>
-  {L.shape(~B, ~DB, ~S, ~s, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, ~S, ~s, d) : C.Change<S, L.Edit<S, S>>}
+  {L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, d, xs)) == L.shape(~A, ~DA, d) : C.Change<Unit, L.Edit<Unit, Unit>>}

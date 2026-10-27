@@ -102,7 +102,7 @@ def Edit.map(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~fa: A -> B, ~fd: DA -> D
     case Update{i, d}:
       Update{i, fd(d)}
 
-# Where a list change acts: the change with every value replaced by s.
-def shape(~A: Data, ~DA: Data, ~S: Data, ~s: S, d: C.Change<List<&2, A>, Edit<A, DA>>) -> C.Change<S, Edit<S, S>>:
-  C.map(~List<&2, A>, ~Edit<A, DA>, ~S, ~Edit<S, S>, ~(xs => s),
-    ~(e => Edit.map(~A, ~DA, ~S, ~S, ~(x => s), ~(u => s), e)), d)
+# Where a list change acts: the change with its values left out.
+def shape(~A: Data, ~DA: Data, d: C.Change<List<&2, A>, Edit<A, DA>>) -> C.Change<Unit, Edit<Unit, Unit>>:
+  C.map(~List<&2, A>, ~Edit<A, DA>, ~Unit, ~Edit<Unit, Unit>, ~(xs => Unit{}),
+    ~(e => Edit.map(~A, ~DA, ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d)

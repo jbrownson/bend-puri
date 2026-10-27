@@ -262,12 +262,12 @@ def Laws.map_change(A, DA, B, DB, pa, pb, f, df, kb, df_ok, d, xs):
       %Equal.sym(List<&2, B>, L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs), L.map(~A, ~B, ~f, xs)), L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, p, xs)), Laws.map_change(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, p, xs)) : {L.patch(~B, ~DB, ~pb, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)), _) == L.map(~A, ~B, ~f, L.patch(~A, ~DA, ~pa, q, L.patch(~A, ~DA, ~pa, p, xs))) : List<&2, B>}
       Laws.map_change(~A, ~DA, ~B, ~DB, ~pa, ~pb, ~f, ~df, ~kb, ~df_ok, q, L.patch(~A, ~DA, ~pa, p, xs))
 
-def Laws.shape(A, DA, S, s, d):
+def Laws.shape(A, DA, d):
   {==}
 
 # By induction on the change; a single edit maps to an edit of the same
 # kind at the same position.
-def Laws.map_change_local(A, DA, B, DB, pa, f, df, kb, S, s, d, xs):
+def Laws.map_change_local(A, DA, B, DB, pa, f, df, kb, d, xs):
   match d:
     case C.Keep{}:
       {==}
@@ -282,6 +282,6 @@ def Laws.map_change_local(A, DA, B, DB, pa, f, df, kb, S, s, d, xs):
         case L.Update{i, u}:
           {==}
     case C.Then{+p, q}:
-      %Equal.sym(C.Change<S, L.Edit<S, S>>, L.shape(~B, ~DB, ~S, ~s, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs)), L.shape(~A, ~DA, ~S, ~s, p), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, ~S, ~s, p, xs)) : {C.Then{_, L.shape(~B, ~DB, ~S, ~s, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)))} == C.Then{L.shape(~A, ~DA, ~S, ~s, p), L.shape(~A, ~DA, ~S, ~s, q)} : C.Change<S, L.Edit<S, S>>}
-      %Equal.sym(C.Change<S, L.Edit<S, S>>, L.shape(~B, ~DB, ~S, ~s, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))), L.shape(~A, ~DA, ~S, ~s, q), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, ~S, ~s, q, L.patch(~A, ~DA, ~pa, p, xs))) : {C.Then{L.shape(~A, ~DA, ~S, ~s, p), _} == C.Then{L.shape(~A, ~DA, ~S, ~s, p), L.shape(~A, ~DA, ~S, ~s, q)} : C.Change<S, L.Edit<S, S>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs)), L.shape(~A, ~DA, p), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, p, xs)) : {C.Then{_, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs)))} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.map.change(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))), L.shape(~A, ~DA, q), Laws.map_change_local(~A, ~DA, ~B, ~DB, ~pa, ~f, ~df, ~kb, q, L.patch(~A, ~DA, ~pa, p, xs))) : {C.Then{L.shape(~A, ~DA, p), _} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
       {==}
