@@ -65,7 +65,7 @@ def over(base: Scene(), above: Scene()) -> Scene():
 
 # Box 1, box 2 overlapping it, and a panel over box 1's top-left corner.
 def scene() -> Scene():
-  over(over(box(G.Rect{0, 0, 100, 100}, 1), box(G.Rect{50, 50, 100, 100}, 2)), panel(G.Rect{0, 0, 40, 40}))
+  over(over(box(G.Rect.of(0, 0, 100, 100), 1), box(G.Rect.of(50, 50, 100, 100), 2)), panel(G.Rect.of(0, 0, 40, 40)))
 
 def painting(r: Hd.Handler(Unit, Event) & List<&2, Paint>) -> List<&2, Paint>:
   (_, paint) = r
@@ -76,4 +76,4 @@ def paint_at(p: G.Point) -> List<&2, Paint>:
 
 # Pointer in the overlap, on box 1 alone, and under the panel.
 def main() -> List<List<&2, Paint>>:
-  [paint_at(G.Point{75, 75}), paint_at(G.Point{60, 20}), paint_at(G.Point{20, 20})]
+  [paint_at(G.Point.of(75, 75)), paint_at(G.Point.of(60, 20)), paint_at(G.Point.of(20, 20))]

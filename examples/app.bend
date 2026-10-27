@@ -61,7 +61,7 @@ def box.click(inside: Bool, +id: U32) -> Maybe<Act()>:
 def box.on(+r: G.Rect, +id: U32, e: Event) -> Maybe<Act()>:
   match e:
     case Mouse{+x, +y, _, True{}}:
-      box.click(G.Rect.contains(r, G.Point{x, y}), id)
+      box.click(G.Rect.contains(r, G.Point.of(x, y)), id)
     case _:
       None{}
 
@@ -113,7 +113,7 @@ def panel.click(inside: Bool) -> Maybe<Act()>:
 def panel.on(+r: G.Rect, e: Event) -> Maybe<Act()>:
   match e:
     case Mouse{+x, +y, _, True{}}:
-      panel.click(G.Rect.contains(r, G.Point{x, y}))
+      panel.click(G.Rect.contains(r, G.Point.of(x, y)))
     case _:
       None{}
 
@@ -131,10 +131,10 @@ def over(base: Scene(), above: Scene()) -> Scene():
 # The whole UI, built fresh from the model.
 def scene(+selected: U32) -> Scene():
   over(over(over(
-    box(G.Rect{60, 60, 200, 160}, 1, selected),
-    box(G.Rect{180, 140, 220, 160}, 2, selected)),
-    box(G.Rect{300, 40, 120, 80}, 3, selected)),
-    panel(G.Rect{30, 170, 120, 120}))
+    box(G.Rect.of(60, 60, 200, 160), 1, selected),
+    box(G.Rect.of(180, 140, 220, 160), 2, selected)),
+    box(G.Rect.of(300, 40, 120, 80), 3, selected)),
+    panel(G.Rect.of(30, 170, 120, 120)))
 
 def Model.selected(m: Model) -> U32:
   match m:
@@ -160,7 +160,7 @@ def apply(r: Maybe<Act()>, m: Model) -> Model:
 def handle(e: Event, +m: Model) -> Model:
   match e:
     case Move{+x, +y}:
-      Model{G.Point{x, y}, Model.selected(m)}
+      Model{G.Point.of(x, y), Model.selected(m)}
     case _:
       apply(Scene.handler(scene(Model.selected(m)))(e), m)
 
@@ -191,7 +191,7 @@ def view(+m: Model) -> Model & Image:
   (m, R.Raster.image(9n, cmds, background()))
 
 def initial() -> Model:
-  Model{G.Point{0, 0}, 0}
+  Model{G.Point.of(0, 0), 0}
 
 def main() -> IO(Unit):
   App.run(~Model, ~App{+m => view(m), tick}, "Puri boxes", 480, 360, initial())

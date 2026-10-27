@@ -15,7 +15,7 @@ with laws checked by Bend's prover.
 - `handler.bend`: transient event handlers, an `Ask` from events to actions.
   The caller chooses the action type: a state transition, an effectful
   command, or anything else.
-- `geom.bend`: points and rectangles.
+- `geom.bend`: points and rectangles, with signed 32-bit coordinates.
 - `frame.bend`: what one placement produces: a handler, a hover probe, and
   deferred ink. `Frame.present` runs a frame's phases in order: it resolves
   hover from the settled probes, then paints with that answer.
@@ -29,7 +29,7 @@ with laws checked by Bend's prover.
   shows, splitting only where there's an edge.
 - `spec.bend`: what the raster must produce, stated the slow, obvious way:
   each pixel takes the color of the topmost command whose rectangle contains
-  it, or the background. It also states four geometric facts about `U32`
+  it, or the background. It also states four geometric facts about `I32`
   coordinates that the proof assumes.
 - `LAWS.bend`: every pixel of a rasterized window is the spec's color, given
   the four facts. They are template clauses, so the law reads "for any proof
@@ -49,6 +49,13 @@ with laws checked by Bend's prover.
   select, under a panel that blocks both.
 - `app_test.bend`: replays scripted events through `app.bend` without a
   window.
+
+## Dependencies
+
+Packages from [BendHub](https://hub.bend-lang.com/packages), imported by
+content hash, so `bend` fetches exactly that code on first use and checks it:
+
+- `bend-kit-int` (`0x4eed9d7a…`): the `I32` used for coordinates.
 
 ## Running
 

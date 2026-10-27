@@ -15,5 +15,5 @@ law image_pixels:
   for +cmds: +List<R.Draw>
   for +bg: U32
   for +p: G.Point
-  for +inside: {G.Rect.contains(G.Rect{0, 0, U32.shln(1, d), U32.shln(1, d)}, p) == True{} : Bool}
-  {S.Spec.pixel(d, R.Raster.image(d, cmds, bg), 0, 0, p) == S.Spec.color(List.reverse(&2, R.Draw, cmds), p, bg) : U32}
+  for +inside: {G.Rect.contains(G.Rect{G.int(0), G.int(0), R.side(d), R.side(d)}, p) == True{} : Bool}
+  {S.Spec.pixel(d, R.Raster.image(d, cmds, bg), G.int(0), G.int(0), p) == S.Spec.color(List.reverse(&2, R.Draw, cmds), p, bg) : U32}

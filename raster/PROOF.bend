@@ -1,4 +1,5 @@
 import Base
+import 0x4eed9d7ac6ece61523d747a9d804e4f0/int.bend as I
 import ../puri/geom.bend as G
 import ./raster.bend as R
 import ./spec.bend as S
@@ -25,9 +26,9 @@ law keep_step:
   for +r: G.Rect
   for +rgb: U32
   for rest: +List<R.Draw>
-  for +x0: U32
-  for +y0: U32
-  for +s: U32
+  for +x0: I.I32
+  for +y0: I.I32
+  for +s: I.I32
   for +p: G.Point
   for +bg: U32
   for m: Bool
@@ -63,9 +64,9 @@ law keep_color:
   for ~meet: S.Fact.meet()
   for ~cover: S.Fact.cover()
   for cmds: +List<R.Draw>
-  for +x0: U32
-  for +y0: U32
-  for +s: U32
+  for +x0: I.I32
+  for +y0: I.I32
+  for +s: I.I32
   for +p: G.Point
   for +bg: U32
   for +inside: {G.Rect.contains(G.Rect{x0, y0, s, s}, p) == True{} : Bool}
@@ -134,9 +135,9 @@ def flat_step(r, rgb, rest, p, bg, c, cv, h, cover, ec):
 law flat_color:
   for ~cover: S.Fact.cover()
   for kept: +List<R.Draw>
-  for +x0: U32
-  for +y0: U32
-  for +s: U32
+  for +x0: I.I32
+  for +y0: I.I32
+  for +s: I.I32
   for +p: G.Point
   for +bg: U32
   for +c: U32
@@ -188,25 +189,25 @@ law child:
   for ~cover: S.Fact.cover()
   for +e: Nat
   for +kept: +List<R.Draw>
-  for +x: U32
-  for +y: U32
+  for +x: I.I32
+  for +y: I.I32
   for +bg: U32
-  for +px: U32
-  for +py: U32
-  for +inside: {G.Rect.contains(G.Rect{x, y, U32.shln(1, e), U32.shln(1, e)}, G.Point{px, py}) == True{} : Bool}
-  for ih: (@c: R.Cell -> @k: +List<R.Draw> -> @x: U32 -> @y: U32 ->
-    {R.Cell.of(k, x, y, U32.shln(1, e), bg) == c : R.Cell} ->
-    {G.Rect.contains(G.Rect{x, y, U32.shln(1, e), U32.shln(1, e)}, G.Point{px, py}) == True{} : Bool} ->
+  for +px: I.I32
+  for +py: I.I32
+  for +inside: {G.Rect.contains(G.Rect{x, y, R.side(e), R.side(e)}, G.Point{px, py}) == True{} : Bool}
+  for ih: (@c: R.Cell -> @k: +List<R.Draw> -> @x: I.I32 -> @y: I.I32 ->
+    {R.Cell.of(k, x, y, R.side(e), bg) == c : R.Cell} ->
+    {G.Rect.contains(G.Rect{x, y, R.side(e), R.side(e)}, G.Point{px, py}) == True{} : Bool} ->
     {S.Spec.pixel(e, R.raster(e, c, k, x, y, bg), x, y, G.Point{px, py}) == S.Spec.color(k, G.Point{px, py}, bg) : U32})
-  {S.Spec.pixel(e, R.raster(e, R.Cell.of(R.keep(kept, x, y, U32.shln(1, e)), x, y, U32.shln(1, e), bg), R.keep(kept, x, y, U32.shln(1, e)), x, y, bg), x, y, G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
+  {S.Spec.pixel(e, R.raster(e, R.Cell.of(R.keep(kept, x, y, R.side(e)), x, y, R.side(e), bg), R.keep(kept, x, y, R.side(e)), x, y, bg), x, y, G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
 
 def child(meet, cover, e, kept, x, y, bg, px, py, inside, ih):
   Equal.trans(U32,
-    S.Spec.pixel(e, R.raster(e, R.Cell.of(R.keep(kept, x, y, U32.shln(1, e)), x, y, U32.shln(1, e), bg), R.keep(kept, x, y, U32.shln(1, e)), x, y, bg), x, y, G.Point{px, py}),
-    S.Spec.color(R.keep(kept, x, y, U32.shln(1, e)), G.Point{px, py}, bg),
+    S.Spec.pixel(e, R.raster(e, R.Cell.of(R.keep(kept, x, y, R.side(e)), x, y, R.side(e), bg), R.keep(kept, x, y, R.side(e)), x, y, bg), x, y, G.Point{px, py}),
+    S.Spec.color(R.keep(kept, x, y, R.side(e)), G.Point{px, py}, bg),
     S.Spec.color(kept, G.Point{px, py}, bg),
-    ih(R.Cell.of(R.keep(kept, x, y, U32.shln(1, e)), x, y, U32.shln(1, e), bg), R.keep(kept, x, y, U32.shln(1, e)), x, y, {==}, inside),
-    keep_color(~meet, ~cover, kept, x, y, U32.shln(1, e), G.Point{px, py}, bg, inside))
+    ih(R.Cell.of(R.keep(kept, x, y, R.side(e)), x, y, R.side(e), bg), R.keep(kept, x, y, R.side(e)), x, y, {==}, inside),
+    keep_color(~meet, ~cover, kept, x, y, R.side(e), G.Point{px, py}, bg, inside))
 
 # Helper: a split cell, with the quarter holding the point as parameters.
 law quad_step:
@@ -214,30 +215,30 @@ law quad_step:
   for ~cover: S.Fact.cover()
   for +e: Nat
   for +kept: +List<R.Draw>
-  for +x0: U32
-  for +y0: U32
+  for +x0: I.I32
+  for +y0: I.I32
   for +bg: U32
-  for +px: U32
-  for +py: U32
+  for +px: I.I32
+  for +py: I.I32
   for right: Bool
   for low: Bool
-  for +inside: {G.Rect.contains(G.Rect{S.Spec.half(right, x0, U32.shln(1, e)), S.Spec.half(low, y0, U32.shln(1, e)), U32.shln(1, e), U32.shln(1, e)}, G.Point{px, py}) == True{} : Bool}
-  for ih: (@c: R.Cell -> @k: +List<R.Draw> -> @x: U32 -> @y: U32 ->
-    {R.Cell.of(k, x, y, U32.shln(1, e), bg) == c : R.Cell} ->
-    {G.Rect.contains(G.Rect{x, y, U32.shln(1, e), U32.shln(1, e)}, G.Point{px, py}) == True{} : Bool} ->
+  for +inside: {G.Rect.contains(G.Rect{S.Spec.half(right, x0, R.side(e)), S.Spec.half(low, y0, R.side(e)), R.side(e), R.side(e)}, G.Point{px, py}) == True{} : Bool}
+  for ih: (@c: R.Cell -> @k: +List<R.Draw> -> @x: I.I32 -> @y: I.I32 ->
+    {R.Cell.of(k, x, y, R.side(e), bg) == c : R.Cell} ->
+    {G.Rect.contains(G.Rect{x, y, R.side(e), R.side(e)}, G.Point{px, py}) == True{} : Bool} ->
     {S.Spec.pixel(e, R.raster(e, c, k, x, y, bg), x, y, G.Point{px, py}) == S.Spec.color(k, G.Point{px, py}, bg) : U32})
-  {S.Spec.pixel(e, S.Spec.quarter(right, low, R.raster(e, R.Cell.of(R.keep(kept, x0, y0, U32.shln(1, e)), x0, y0, U32.shln(1, e), bg), R.keep(kept, x0, y0, U32.shln(1, e)), x0, y0, bg), R.raster(e, R.Cell.of(R.keep(kept, (x0 + U32.shln(1, e) : U32), y0, U32.shln(1, e)), (x0 + U32.shln(1, e) : U32), y0, U32.shln(1, e), bg), R.keep(kept, (x0 + U32.shln(1, e) : U32), y0, U32.shln(1, e)), (x0 + U32.shln(1, e) : U32), y0, bg), R.raster(e, R.Cell.of(R.keep(kept, x0, (y0 + U32.shln(1, e) : U32), U32.shln(1, e)), x0, (y0 + U32.shln(1, e) : U32), U32.shln(1, e), bg), R.keep(kept, x0, (y0 + U32.shln(1, e) : U32), U32.shln(1, e)), x0, (y0 + U32.shln(1, e) : U32), bg), R.raster(e, R.Cell.of(R.keep(kept, (x0 + U32.shln(1, e) : U32), (y0 + U32.shln(1, e) : U32), U32.shln(1, e)), (x0 + U32.shln(1, e) : U32), (y0 + U32.shln(1, e) : U32), U32.shln(1, e), bg), R.keep(kept, (x0 + U32.shln(1, e) : U32), (y0 + U32.shln(1, e) : U32), U32.shln(1, e)), (x0 + U32.shln(1, e) : U32), (y0 + U32.shln(1, e) : U32), bg)), S.Spec.half(right, x0, U32.shln(1, e)), S.Spec.half(low, y0, U32.shln(1, e)), G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
+  {S.Spec.pixel(e, S.Spec.quarter(right, low, R.raster(e, R.Cell.of(R.keep(kept, x0, y0, R.side(e)), x0, y0, R.side(e), bg), R.keep(kept, x0, y0, R.side(e)), x0, y0, bg), R.raster(e, R.Cell.of(R.keep(kept, (x0 + R.side(e) : I.I32), y0, R.side(e)), (x0 + R.side(e) : I.I32), y0, R.side(e), bg), R.keep(kept, (x0 + R.side(e) : I.I32), y0, R.side(e)), (x0 + R.side(e) : I.I32), y0, bg), R.raster(e, R.Cell.of(R.keep(kept, x0, (y0 + R.side(e) : I.I32), R.side(e)), x0, (y0 + R.side(e) : I.I32), R.side(e), bg), R.keep(kept, x0, (y0 + R.side(e) : I.I32), R.side(e)), x0, (y0 + R.side(e) : I.I32), bg), R.raster(e, R.Cell.of(R.keep(kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e)), (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e), bg), R.keep(kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e)), (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), bg)), S.Spec.half(right, x0, R.side(e)), S.Spec.half(low, y0, R.side(e)), G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
 
 def quad_step(meet, cover, e, kept, x0, y0, bg, px, py, right, low, inside, ih):
   match right low:
     case False{} False{}:
       child(~meet, ~cover, e, kept, x0, y0, bg, px, py, inside, ih)
     case True{} False{}:
-      child(~meet, ~cover, e, kept, (x0 + U32.shln(1, e) : U32), y0, bg, px, py, inside, ih)
+      child(~meet, ~cover, e, kept, (x0 + R.side(e) : I.I32), y0, bg, px, py, inside, ih)
     case False{} True{}:
-      child(~meet, ~cover, e, kept, x0, (y0 + U32.shln(1, e) : U32), bg, px, py, inside, ih)
+      child(~meet, ~cover, e, kept, x0, (y0 + R.side(e) : I.I32), bg, px, py, inside, ih)
     case True{} True{}:
-      child(~meet, ~cover, e, kept, (x0 + U32.shln(1, e) : U32), (y0 + U32.shln(1, e) : U32), bg, px, py, inside, ih)
+      child(~meet, ~cover, e, kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), bg, px, py, inside, ih)
 
 # Lemma, by induction on the depth: a cell rasterized from its commands
 # gives every point inside it the spec's color.
@@ -249,36 +250,36 @@ law raster_color:
   for +d: Nat
   for cell: R.Cell
   for +kept: +List<R.Draw>
-  for +x0: U32
-  for +y0: U32
+  for +x0: I.I32
+  for +y0: I.I32
   for +bg: U32
   for +p: G.Point
-  for ec: {R.Cell.of(kept, x0, y0, U32.shln(1, d), bg) == cell : R.Cell}
-  for +inside: {G.Rect.contains(G.Rect{x0, y0, U32.shln(1, d), U32.shln(1, d)}, p) == True{} : Bool}
+  for ec: {R.Cell.of(kept, x0, y0, R.side(d), bg) == cell : R.Cell}
+  for +inside: {G.Rect.contains(G.Rect{x0, y0, R.side(d), R.side(d)}, p) == True{} : Bool}
   {S.Spec.pixel(d, R.raster(d, cell, kept, x0, y0, bg), x0, y0, p) == S.Spec.color(kept, p, bg) : U32}
 
 def raster_color(meet, cover, unit, quarter, d, cell, kept, x0, y0, bg, p, ec, inside):
   match d cell:
     case 0n R.Flat{c}:
-      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, U32.shln(1, 0n), p, bg, c, ec, inside))
+      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(0n), p, bg, c, ec, inside))
     case 0n R.Mixed{}:
       %Equal.sym(G.Point, p, G.Point{x0, y0}, unit(p, x0, y0, inside)) : {R.first(kept, G.Point{x0, y0}, bg) == S.Spec.color(kept, _, bg) : U32}
       first_color(kept, G.Point{x0, y0}, bg)
     case 1n+e R.Flat{c}:
-      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, U32.shln(1, 1n+e), p, bg, c, ec, inside))
+      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(1n+e), p, bg, c, ec, inside))
     case 1n+e R.Mixed{}:
       match p:
         case G.Point{+px, +py}:
           quad_step(~meet, ~cover, e, kept, x0, y0, bg, px, py,
-            U32.is_le((x0 + U32.shln(1, e) : U32), px), U32.is_le((y0 + U32.shln(1, e) : U32), py),
+            I.I32.is_le((x0 + R.side(e) : I.I32), px), I.I32.is_le((y0 + R.side(e) : I.I32), py),
             quarter(x0, y0, e, px, py, inside),
             c => k => x => y => ec2 => ins => raster_color(~meet, ~cover, ~unit, ~quarter, e, c, k, x, y, bg, G.Point{px, py}, ec2, ins))
 
 # The window is the root cell, holding the commands kept for it, top first.
 def Laws.image_pixels(meet, cover, unit, quarter, d, cmds, bg, p, inside):
   Equal.trans(U32,
-    S.Spec.pixel(d, R.raster(d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d)), 0, 0, U32.shln(1, d), bg), R.keep(List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d)), 0, 0, bg), 0, 0, p),
-    S.Spec.color(R.keep(List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d)), p, bg),
+    S.Spec.pixel(d, R.raster(d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg), G.int(0), G.int(0), p),
+    S.Spec.color(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), p, bg),
     S.Spec.color(List.reverse(&2, R.Draw, cmds), p, bg),
-    raster_color(~meet, ~cover, ~unit, ~quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d)), 0, 0, U32.shln(1, d), bg), R.keep(List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d)), 0, 0, bg, p, {==}, inside),
-    keep_color(~meet, ~cover, List.reverse(&2, R.Draw, cmds), 0, 0, U32.shln(1, d), p, bg, inside))
+    raster_color(~meet, ~cover, ~unit, ~quarter, d, R.Cell.of(R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), R.side(d), bg), R.keep(List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d)), G.int(0), G.int(0), bg, p, {==}, inside),
+    keep_color(~meet, ~cover, List.reverse(&2, R.Draw, cmds), G.int(0), G.int(0), R.side(d), p, bg, inside))
