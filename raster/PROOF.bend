@@ -457,6 +457,22 @@ def quad_step(meet, cover, e, kept, x0, y0, bg, px, py, right, low, inside, ih):
     case True{} True{}:
       child(~meet, ~cover, e, kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), bg, px, py, inside, ih)
 
+# Lemma: split gives each quarter exactly what keep gives it.
+law split_keep:
+  for cmds: +List<R.Draw>
+  for +x0: I.I32
+  for +y0: I.I32
+  for +s: I.I32
+  {R.split(cmds, x0, y0, s) == (R.keep(cmds, x0, y0, s), R.keep(cmds, (x0 + s : I.I32), y0, s), R.keep(cmds, x0, (y0 + s : I.I32), s), R.keep(cmds, (x0 + s : I.I32), (y0 + s : I.I32), s)) : R.Quads()}
+
+def split_keep(cmds, x0, y0, s):
+  match cmds:
+    case Nil{}:
+      {==}
+    case Con{R.FillRect{+r, +rgb}, +rest}:
+      %Equal.sym(R.Quads(), R.split(rest, x0, y0, s), (R.keep(rest, x0, y0, s), R.keep(rest, (x0 + s : I.I32), y0, s), R.keep(rest, x0, (y0 + s : I.I32), s), R.keep(rest, (x0 + s : I.I32), (y0 + s : I.I32), s)), split_keep(rest, x0, y0, s)) : {R.split.add(r, rgb, x0, y0, s, _) == (R.keep(R.FillRect{r, rgb} <> rest, x0, y0, s), R.keep(R.FillRect{r, rgb} <> rest, (x0 + s : I.I32), y0, s), R.keep(R.FillRect{r, rgb} <> rest, x0, (y0 + s : I.I32), s), R.keep(R.FillRect{r, rgb} <> rest, (x0 + s : I.I32), (y0 + s : I.I32), s)) : R.Quads()}
+      {==}
+
 # Lemma, by induction on the depth: a cell rasterized from its commands
 # gives every point inside it the spec's color.
 law raster_color:
@@ -487,6 +503,9 @@ def raster_color(meet, cover, unit, quarter, d, cell, kept, x0, y0, bg, p, ec, i
     case 1n+e R.Mixed{}:
       match p:
         case G.Point{+px, +py}:
+          # The raster splits the commands in one pass; split_keep turns
+          # that into the four keeps quad_step is about.
+          %Equal.sym(R.Quads(), R.split(kept, x0, y0, R.side(e)), (R.keep(kept, x0, y0, R.side(e)), R.keep(kept, (x0 + R.side(e) : I.I32), y0, R.side(e)), R.keep(kept, x0, (y0 + R.side(e) : I.I32), R.side(e)), R.keep(kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e))), split_keep(kept, x0, y0, R.side(e))) : {S.Spec.pixel(1n+e, R.quads(_, +k0 => +k1 => +k2 => +k3 => Qua{R.raster(e, R.Cell.of(k0, x0, y0, R.side(e), bg), k0, x0, y0, bg), R.raster(e, R.Cell.of(k1, (x0 + R.side(e) : I.I32), y0, R.side(e), bg), k1, (x0 + R.side(e) : I.I32), y0, bg), R.raster(e, R.Cell.of(k2, x0, (y0 + R.side(e) : I.I32), R.side(e), bg), k2, x0, (y0 + R.side(e) : I.I32), bg), R.raster(e, R.Cell.of(k3, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e), bg), k3, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), bg)}), x0, y0, G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
           quad_step(~meet, ~cover, e, kept, x0, y0, bg, px, py,
             I.I32.is_le((x0 + R.side(e) : I.I32), px), I.I32.is_le((y0 + R.side(e) : I.I32), py),
             quarter(x0, y0, e, px, py, inside),
