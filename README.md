@@ -73,6 +73,12 @@ bend examples/app_test.bend   # replays events through the app headlessly
 bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 
+`bend <file> --verdict` checks a proof a second time with Bend's BendTT
+kernel, which has its own proof in Lean, and confirms nothing relies on
+`@unsafe` or foreign code. Both `PROOF.bend` files pass it. It needs Lean
+4.34.0 (the elan toolchain `leanprover/lean4:v4.34.0`) to build the kernel
+on first use.
+
 Windows only open from a native build; `bend examples/app.bend` alone runs
 on Bend's JS path, which has no window. To open the interactive window:
 
