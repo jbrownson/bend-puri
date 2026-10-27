@@ -6,43 +6,47 @@ with laws checked by Bend's prover.
 
 ## Files
 
+A module with laws has a directory of its own: the module, `LAWS.bend`,
+what it promises, and `PROOF.bend`, their proofs. The laws say what each
+operation returns, case by case, so reading them is enough to know what it
+does. Laws under "It follows that" add nothing new: they are consequences,
+checked so you don't have to work them out. `PROOF.bend` at the root checks
+every module's proofs.
+
 `puri/`, the library:
 
-- `ask.bend`: asking a stack of placements a question. The one placed later
+- `ask/`: asking a stack of placements a question. The one placed later
   (on top) answers first, and only a decline falls through to the one below.
   `Ask.over(base, above)` stacks two. Event handling and hover both work
   this way.
-- `handler.bend`: transient event handlers, an `Ask` from events to actions.
+- `handler/`: transient event handlers, an `Ask` from events to actions.
   The caller chooses the action type: a state transition, an effectful
   command, or anything else.
+- `frame/`: what one placement produces: a handler, a hover probe, and
+  deferred ink. `Frame.present` runs a frame's phases in order: it resolves
+  hover from the settled probes, then paints with that answer.
 - `geom.bend`: points and rectangles, with signed 32-bit coordinates.
 - `order.bend`: `I32`'s order, proved from the packages below:
   transitivity, totality, and what adding 1 does.
 - `arith.bend`: `U32` and `I32` arithmetic the packages don't have:
   associativity, a shift as a doubling, and the sign bit as adding 2^31.
-- `frame.bend`: what one placement produces: a handler, a hover probe, and
-  deferred ink. `Frame.present` runs a frame's phases in order: it resolves
-  hover from the settled probes, then paints with that answer.
-- `LAWS.bend`: what the library promises. The laws say what each operation
-  returns, case by case, so reading them is enough to know what it does.
-- `PROOF.bend`: their proofs.
 
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
 
-- `change.bend`: changes to any value. A type supplies its own edits;
+- `change/`: changes to any value. A type supplies its own edits;
   `Change` adds what every type has: no change, starting over with a new
   value, and one change then another. `lift` builds a derivative from one
-  that handles single edits.
-- `list.bend`: a list's edits (insert, delete, and update an element in
+  that handles single edits. The laws say what applying each change
+  returns, and that a derivative lifted from correct single-edit
+  derivatives is correct.
+- `list/`: a list's edits (insert, delete, and update an element in
   place), `patch` to apply a change, and `map.change`, the derivative of
   `map`. An element's change can be of any type, with its own way to apply
-  it: a `Change` of the element, or something else entirely.
-- `LAWS.bend`: what applying each change returns; that a derivative lifted
-  from correct single-edit derivatives is correct; and the two laws of
-  `map.change`: it is correct (given a correct derivative for the mapped
-  function), and it acts exactly where the change acts.
-- `PROOF.bend`: their proofs.
+  it: a `Change` of the element, or something else entirely. The laws say
+  what each edit does, and that `map.change` is correct (given a correct
+  derivative for the mapped function) and acts exactly where the change
+  acts.
 
 The approach follows Phil Freeman's
 [Purview](https://github.com/paf31/purescript-purview), a PureScript UI
@@ -89,9 +93,8 @@ content hash, so `bend` fetches exactly that code on first use and checks it:
 ## Running
 
 ```sh
-bend puri/PROOF.bend          # ALL PROOFS CHECK when every law holds
-bend raster/PROOF.bend        # the raster law
-bend ilc/PROOF.bend           # changes, and map's derivative
+bend PROOF.bend               # ALL PROOFS CHECK when every law holds
+bend ilc/list/PROOF.bend      # or one module's laws
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
@@ -100,7 +103,7 @@ bend raster/raster_test.bend  # checks pixels and the geometric facts
 
 `bend <file> --verdict` checks a proof a second time with Bend's BendTT
 kernel, which has its own proof in Lean, and confirms nothing relies on
-`@unsafe` or foreign code. All three `PROOF.bend` files pass it. It needs Lean
+`@unsafe` or foreign code. `bend PROOF.bend --verdict` passes. It needs Lean
 4.34.0 (the elan toolchain `leanprover/lean4:v4.34.0`) to build the kernel
 on first use.
 

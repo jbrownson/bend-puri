@@ -1,5 +1,5 @@
 import Base
-import ./change.bend as C
+import ../change/change.bend as C
 
 # A list's own edits, and mapping a function over a list and over its
 # changes. Positions count from 0. DA is the elements' change type, of any

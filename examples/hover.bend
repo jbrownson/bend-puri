@@ -1,7 +1,7 @@
 import Base
-import ../puri/handler.bend as Hd
+import ../puri/handler/handler.bend as Hd
 import ../puri/geom.bend as G
-import ../puri/frame.bend as F
+import ../puri/frame/frame.bend as F
 
 # The example's colors, named by role. A real backend would map them to RGB.
 type Color is Data:

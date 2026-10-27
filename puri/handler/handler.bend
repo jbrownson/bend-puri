@@ -1,5 +1,5 @@
 import Base
-import ./ask.bend as A
+import ../ask/ask.bend as A
 
 # A handler looks at an event and either declines (None) or answers
 # with an action to run (Some). Act is the action type chosen by the

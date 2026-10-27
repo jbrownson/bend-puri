@@ -1,7 +1,7 @@
 import Base
-import ../puri/handler.bend as Hd
+import ../puri/handler/handler.bend as Hd
 import ../puri/geom.bend as G
-import ../puri/frame.bend as F
+import ../puri/frame/frame.bend as F
 import ../raster/raster.bend as R
 
 # Boxes you can hover and click. Run with: bend app.bend

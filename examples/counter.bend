@@ -1,5 +1,5 @@
 import Base
-import ../puri/handler.bend as P
+import ../puri/handler/handler.bend as P
 
 # The app's actions: steps that read and update the counter, producing a
 # result of type A. Puri only ever sees Count(Unit); A is for composing

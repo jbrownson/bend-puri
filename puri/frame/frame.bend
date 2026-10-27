@@ -1,7 +1,7 @@
 import Base
-import ./ask.bend as A
-import ./handler.bend as Hd
-import ./geom.bend as G
+import ../ask/ask.bend as A
+import ../handler/handler.bend as Hd
+import ../geom.bend as G
 
 # What the pointer rests on, as one placement answers: a hover target, or
 # an occluder that covers what lies beneath without naming a target.
