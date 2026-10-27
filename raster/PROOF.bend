@@ -473,6 +473,49 @@ def split_keep(cmds, x0, y0, s):
       %Equal.sym(R.Quads(), R.split(rest, x0, y0, s), (R.keep(rest, x0, y0, s), R.keep(rest, (x0 + s : I.I32), y0, s), R.keep(rest, x0, (y0 + s : I.I32), s), R.keep(rest, (x0 + s : I.I32), (y0 + s : I.I32), s)), split_keep(rest, x0, y0, s)) : {R.split.add(r, rgb, x0, y0, s, _) == (R.keep(R.FillRect{r, rgb} <> rest, x0, y0, s), R.keep(R.FillRect{r, rgb} <> rest, (x0 + s : I.I32), y0, s), R.keep(R.FillRect{r, rgb} <> rest, x0, (y0 + s : I.I32), s), R.keep(R.FillRect{r, rgb} <> rest, (x0 + s : I.I32), (y0 + s : I.I32), s)) : R.Quads()}
       {==}
 
+# Helper: a pixel of a 2x2 cell takes the first command containing it,
+# and the point inside a 1x1 square is that pixel.
+law unit_child:
+  for ~unit: S.Fact.unit()
+  for kept: +List<R.Draw>
+  for +x: I.I32
+  for +y: I.I32
+  for +bg: U32
+  for +px: I.I32
+  for +py: I.I32
+  for +inside: {G.Rect.contains(G.Rect{x, y, R.side(0n), R.side(0n)}, G.Point{px, py}) == True{} : Bool}
+  {R.first(kept, G.Point{x, y}, bg) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
+
+def unit_child(unit, kept, x, y, bg, px, py, inside):
+  %Equal.sym(G.Point, G.Point{px, py}, G.Point{x, y}, unit(G.Point{px, py}, x, y, inside)) : {R.first(kept, G.Point{x, y}, bg) == S.Spec.color(kept, _, bg) : U32}
+  first_color(kept, G.Point{x, y}, bg)
+
+# Helper: a 2x2 cell colored pixel by pixel, with the quarter holding the
+# point as parameters.
+law unit_step:
+  for ~unit: S.Fact.unit()
+  for +kept: +List<R.Draw>
+  for +x0: I.I32
+  for +y0: I.I32
+  for +bg: U32
+  for +px: I.I32
+  for +py: I.I32
+  for right: Bool
+  for low: Bool
+  for +inside: {G.Rect.contains(G.Rect{S.Spec.half(right, x0, R.side(0n)), S.Spec.half(low, y0, R.side(0n)), R.side(0n), R.side(0n)}, G.Point{px, py}) == True{} : Bool}
+  {S.Spec.pixel(0n, S.Spec.quarter(right, low, Pix{R.first(kept, G.Point{x0, y0}, bg)}, Pix{R.first(kept, G.Point{(x0 + G.int(1) : I.I32), y0}, bg)}, Pix{R.first(kept, G.Point{x0, (y0 + G.int(1) : I.I32)}, bg)}, Pix{R.first(kept, G.Point{(x0 + G.int(1) : I.I32), (y0 + G.int(1) : I.I32)}, bg)}), S.Spec.half(right, x0, R.side(0n)), S.Spec.half(low, y0, R.side(0n)), G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
+
+def unit_step(unit, kept, x0, y0, bg, px, py, right, low, inside):
+  match right low:
+    case False{} False{}:
+      unit_child(~unit, kept, x0, y0, bg, px, py, inside)
+    case True{} False{}:
+      unit_child(~unit, kept, (x0 + G.int(1) : I.I32), y0, bg, px, py, inside)
+    case False{} True{}:
+      unit_child(~unit, kept, x0, (y0 + G.int(1) : I.I32), bg, px, py, inside)
+    case True{} True{}:
+      unit_child(~unit, kept, (x0 + G.int(1) : I.I32), (y0 + G.int(1) : I.I32), bg, px, py, inside)
+
 # Lemma, by induction on the depth: a cell rasterized from its commands
 # gives every point inside it the spec's color.
 law raster_color:
@@ -492,24 +535,40 @@ law raster_color:
   {S.Spec.pixel(d, R.raster(d, cell, kept, x0, y0, bg), x0, y0, p) == S.Spec.color(kept, p, bg) : U32}
 
 def raster_color(meet, cover, unit, quarter, d, cell, kept, x0, y0, bg, p, ec, inside):
-  match d cell:
-    case 0n R.Flat{c}:
-      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(0n), p, bg, c, ec, inside))
-    case 0n R.Mixed{}:
-      %Equal.sym(G.Point, p, G.Point{x0, y0}, unit(p, x0, y0, inside)) : {R.first(kept, G.Point{x0, y0}, bg) == S.Spec.color(kept, _, bg) : U32}
-      first_color(kept, G.Point{x0, y0}, bg)
-    case 1n+e R.Flat{c}:
-      Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(1n+e), p, bg, c, ec, inside))
-    case 1n+e R.Mixed{}:
-      match p:
-        case G.Point{+px, +py}:
-          # The raster splits the commands in one pass; split_keep turns
-          # that into the four keeps quad_step is about.
-          %Equal.sym(R.Quads(), R.split(kept, x0, y0, R.side(e)), (R.keep(kept, x0, y0, R.side(e)), R.keep(kept, (x0 + R.side(e) : I.I32), y0, R.side(e)), R.keep(kept, x0, (y0 + R.side(e) : I.I32), R.side(e)), R.keep(kept, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e))), split_keep(kept, x0, y0, R.side(e))) : {S.Spec.pixel(1n+e, R.quads(_, +k0 => +k1 => +k2 => +k3 => Qua{R.raster(e, R.Cell.of(k0, x0, y0, R.side(e), bg), k0, x0, y0, bg), R.raster(e, R.Cell.of(k1, (x0 + R.side(e) : I.I32), y0, R.side(e), bg), k1, (x0 + R.side(e) : I.I32), y0, bg), R.raster(e, R.Cell.of(k2, x0, (y0 + R.side(e) : I.I32), R.side(e), bg), k2, x0, (y0 + R.side(e) : I.I32), bg), R.raster(e, R.Cell.of(k3, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), R.side(e), bg), k3, (x0 + R.side(e) : I.I32), (y0 + R.side(e) : I.I32), bg)}), x0, y0, G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
-          quad_step(~meet, ~cover, e, kept, x0, y0, bg, px, py,
-            I.I32.is_le((x0 + R.side(e) : I.I32), px), I.I32.is_le((y0 + R.side(e) : I.I32), py),
-            quarter(x0, y0, e, px, py, inside),
-            c => k => x => y => ec2 => ins => raster_color(~meet, ~cover, ~unit, ~quarter, e, c, k, x, y, bg, G.Point{px, py}, ec2, ins))
+  match d:
+    case 0n:
+      match cell:
+        case R.Flat{c}:
+          Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(0n), p, bg, c, ec, inside))
+        case R.Mixed{}:
+          %Equal.sym(G.Point, p, G.Point{x0, y0}, unit(p, x0, y0, inside)) : {R.first(kept, G.Point{x0, y0}, bg) == S.Spec.color(kept, _, bg) : U32}
+          first_color(kept, G.Point{x0, y0}, bg)
+    case 1n+e:
+      match e:
+        case 0n:
+          match cell:
+            case R.Flat{c}:
+              Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(1n), p, bg, c, ec, inside))
+            case R.Mixed{}:
+              match p:
+                case G.Point{+px, +py}:
+                  unit_step(~unit, kept, x0, y0, bg, px, py,
+                    I.I32.is_le((x0 + R.side(0n) : I.I32), px), I.I32.is_le((y0 + R.side(0n) : I.I32), py),
+                    quarter(x0, y0, 0n, px, py, inside))
+        case 1n+f:
+          match cell:
+            case R.Flat{c}:
+              Equal.sym(U32, S.Spec.color(kept, p, bg), c, flat_color(~cover, kept, x0, y0, R.side(1n+(1n+f)), p, bg, c, ec, inside))
+            case R.Mixed{}:
+              match p:
+                case G.Point{+px, +py}:
+                  # The raster splits the commands in one pass; split_keep turns
+                  # that into the four keeps quad_step is about.
+                  %Equal.sym(R.Quads(), R.split(kept, x0, y0, R.side(1n+f)), (R.keep(kept, x0, y0, R.side(1n+f)), R.keep(kept, (x0 + R.side(1n+f) : I.I32), y0, R.side(1n+f)), R.keep(kept, x0, (y0 + R.side(1n+f) : I.I32), R.side(1n+f)), R.keep(kept, (x0 + R.side(1n+f) : I.I32), (y0 + R.side(1n+f) : I.I32), R.side(1n+f))), split_keep(kept, x0, y0, R.side(1n+f))) : {S.Spec.pixel(1n+e, R.quads(_, +k0 => +k1 => +k2 => +k3 => Qua{R.raster(1n+f, R.Cell.of(k0, x0, y0, R.side(1n+f), bg), k0, x0, y0, bg), R.raster(1n+f, R.Cell.of(k1, (x0 + R.side(1n+f) : I.I32), y0, R.side(1n+f), bg), k1, (x0 + R.side(1n+f) : I.I32), y0, bg), R.raster(1n+f, R.Cell.of(k2, x0, (y0 + R.side(1n+f) : I.I32), R.side(1n+f), bg), k2, x0, (y0 + R.side(1n+f) : I.I32), bg), R.raster(1n+f, R.Cell.of(k3, (x0 + R.side(1n+f) : I.I32), (y0 + R.side(1n+f) : I.I32), R.side(1n+f), bg), k3, (x0 + R.side(1n+f) : I.I32), (y0 + R.side(1n+f) : I.I32), bg)}), x0, y0, G.Point{px, py}) == S.Spec.color(kept, G.Point{px, py}, bg) : U32}
+                  quad_step(~meet, ~cover, 1n+f, kept, x0, y0, bg, px, py,
+                    I.I32.is_le((x0 + R.side(1n+f) : I.I32), px), I.I32.is_le((y0 + R.side(1n+f) : I.I32), py),
+                    quarter(x0, y0, 1n+f, px, py, inside),
+                    c => k => x => y => ec2 => ins => raster_color(~meet, ~cover, ~unit, ~quarter, 1n+f, c, k, x, y, bg, G.Point{px, py}, ec2, ins))
 
 # The window is the root cell, holding the commands kept for it, top first.
 def Laws.image_pixels(d, cmds, bg, p, inside):

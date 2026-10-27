@@ -111,25 +111,41 @@ def quads(q: Quads(), k: +List<Draw> -> +List<Draw> -> +List<Draw> -> +List<Draw
 
 # The quadtree for a square of side 2^d at (x0, y0), given the commands
 # that reach it. A uniform cell is one Pix; a cell with an edge splits
-# into four, each keeping only the commands that reach it.
+# into four, each keeping only the commands that reach it. A 2x2 cell with
+# an edge, the most common kind, colors its four pixels directly.
 def raster(+d: Nat, cell: Cell, +kept: +List<Draw>, +x0: I.I32, +y0: I.I32, +bg: U32) -> Image:
-  match d cell:
-    case 0n Flat{rgb}:
-      Pix{rgb}
-    case 0n Mixed{}:
-      Pix{first(kept, G.Point{x0, y0}, bg)}
-    case 1n+e Flat{rgb}:
-      Pix{rgb}
-    case 1n+e Mixed{}:
-      +s = side(e)
-      +x1 = (x0 + s : I.I32)
-      +y1 = (y0 + s : I.I32)
-      quads(split(kept, x0, y0, s), +k0 => +k1 => +k2 => +k3 =>
-        tl tr bl br = raster(e, Cell.of(k0, x0, y0, s, bg), k0, x0, y0, bg)
-          raster(e, Cell.of(k1, x1, y0, s, bg), k1, x1, y0, bg)
-          raster(e, Cell.of(k2, x0, y1, s, bg), k2, x0, y1, bg)
-          raster(e, Cell.of(k3, x1, y1, s, bg), k3, x1, y1, bg)
-        Qua{tl, tr, bl, br})
+  match d:
+    case 0n:
+      match cell:
+        case Flat{rgb}:
+          Pix{rgb}
+        case Mixed{}:
+          Pix{first(kept, G.Point{x0, y0}, bg)}
+    case 1n+e:
+      match e:
+        case 0n:
+          match cell:
+            case Flat{rgb}:
+              Pix{rgb}
+            case Mixed{}:
+              +x1 = (x0 + G.int(1) : I.I32)
+              +y1 = (y0 + G.int(1) : I.I32)
+              Qua{Pix{first(kept, G.Point{x0, y0}, bg)}, Pix{first(kept, G.Point{x1, y0}, bg)},
+                Pix{first(kept, G.Point{x0, y1}, bg)}, Pix{first(kept, G.Point{x1, y1}, bg)}}
+        case 1n+f:
+          match cell:
+            case Flat{rgb}:
+              Pix{rgb}
+            case Mixed{}:
+              +s = side(1n+f)
+              +x1 = (x0 + s : I.I32)
+              +y1 = (y0 + s : I.I32)
+              quads(split(kept, x0, y0, s), +k0 => +k1 => +k2 => +k3 =>
+                tl tr bl br = raster(1n+f, Cell.of(k0, x0, y0, s, bg), k0, x0, y0, bg)
+                  raster(1n+f, Cell.of(k1, x1, y0, s, bg), k1, x1, y0, bg)
+                  raster(1n+f, Cell.of(k2, x0, y1, s, bg), k2, x0, y1, bg)
+                  raster(1n+f, Cell.of(k3, x1, y1, s, bg), k3, x1, y1, bg)
+                Qua{tl, tr, bl, br})
 
 # A whole window: the root square of side 2^d over a background color,
 # from commands in painting order (back to front).
