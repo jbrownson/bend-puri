@@ -8,9 +8,6 @@ import ./frame.bend as F
 # operation returns, case by case, so together they pin down what the
 # library does. Laws under "It follows that" add nothing new: they are
 # consequences, checked so you don't have to work them out.
-#
-# Bend doesn't infer type arguments, so each law starts with a `for` per
-# type it mentions.
 
 # Asking a stack
 # --------------

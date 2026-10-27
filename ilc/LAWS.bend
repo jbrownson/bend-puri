@@ -6,10 +6,6 @@ import ./list.bend as L
 # applying each change returns, case by case. A derivative turns a change
 # to a function's input into the change to its result; the laws say when
 # one is correct and when it is local.
-#
-# Bend doesn't infer type arguments, so each law starts with a `for` per
-# type it mentions. A `~` before a name (a template) lets the law use it
-# any number of times; it is how functions and hypotheses are passed.
 
 # Changes to any value
 # --------------------
