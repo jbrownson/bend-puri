@@ -88,7 +88,7 @@ law run_append:
 # whole.apply applies.
 law whole:
   for ~ce: C.EditStructure
-  {C.whole(~ce) == C.EditStructure{C.Value(ce), C.Whole<C.Value(ce), C.Edit(ce)>, w => a => C.whole.apply(~ce, w, a)} : C.EditStructure}
+  {C.whole(~ce) == C.EditStructure{C.Value(ce), C.Whole<ce>, w => a => C.whole.apply(~ce, w, a)} : C.EditStructure}
 
 # LAW: replacing gives the new value.
 law whole_replace:
@@ -209,7 +209,7 @@ law whole_lift_replace:
   for ~g: C.Inc<ca, cb>
   for x: C.Value(ca)
   for a: C.Value(ca)
-  {C.whole.lift.df(~ca, ~cb, ~g, C.Replace{x}, a) == C.Replace{C.Inc.f(ca, cb, g)(x)} : C.Whole<C.Value(cb), C.Edit(cb)>}
+  {C.whole.lift.df(~ca, ~cb, ~g, C.Replace{x}, a) == C.Replace{C.Inc.f(ca, cb, g)(x)} : C.Whole<cb>}
 
 # LAW: an edit gives g's edit.
 law whole_lift_apply:
@@ -218,7 +218,7 @@ law whole_lift_apply:
   for ~g: C.Inc<ca, cb>
   for e: C.Edit(ca)
   for a: C.Value(ca)
-  {C.whole.lift.df(~ca, ~cb, ~g, C.Apply{e}, a) == C.Apply{C.Inc.df(ca, cb, g)(a, e)} : C.Whole<C.Value(cb), C.Edit(cb)>}
+  {C.whole.lift.df(~ca, ~cb, ~g, C.Apply{e}, a) == C.Apply{C.Inc.df(ca, cb, g)(a, e)} : C.Whole<cb>}
 
 # It follows that:
 

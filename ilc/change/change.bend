@@ -66,11 +66,11 @@ def run_append(~ce: EditStructure, xs: List<&2, Edit(ce)>, ys: List<&2, Edit(ce)
       run_append(~ce, t, ys, EditStructure.apply(ce)(e, a))
 
 # An edit of a value: a whole new one, or one of its own edits.
-type Whole<-A: Data, -E: Data> is Data:
-  Replace{x: A}
-  Apply{e: E}
+type Whole<-ce: EditStructure> is Data:
+  Replace{x: Value(ce)}
+  Apply{e: Edit(ce)}
 
-def whole.apply(~ce: EditStructure, w: Whole<Value(ce), Edit(ce)>, a: Value(ce)) -> Value(ce):
+def whole.apply(~ce: EditStructure, w: Whole<ce>, a: Value(ce)) -> Value(ce):
   match w:
     case Replace{x}:
       x
@@ -79,7 +79,7 @@ def whole.apply(~ce: EditStructure, w: Whole<Value(ce), Edit(ce)>, a: Value(ce))
 
 # ce's edits, and replacing the whole value.
 def whole(~ce: EditStructure) -> EditStructure:
-  EditStructure{Value(ce), Whole<Value(ce), Edit(ce)>, w => a => whole.apply(~ce, w, a)}
+  EditStructure{Value(ce), Whole<ce>, w => a => whole.apply(~ce, w, a)}
 
 # whole(ce), which is a change structure whatever ce is: replacing gets
 # from any value to any other.
@@ -124,8 +124,8 @@ def lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, runs(~cb)>) -> Inc<
 
 # whole.lift's derivative: replacing the input replaces the result with f
 # of the new value, and an edit gives g's edit.
-def whole.lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, cb>, w: Whole<Value(ca), Edit(ca)>,
-  a: Value(ca)) -> Whole<Value(cb), Edit(cb)>:
+def whole.lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, cb>, w: Whole<ca>,
+  a: Value(ca)) -> Whole<cb>:
   match w:
     case Replace{x}:
       Replace{Inc.f(ca, cb, g)(x)}

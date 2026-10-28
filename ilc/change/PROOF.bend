@@ -143,7 +143,7 @@ law whole_lift_df_ok:
   for ~cb: C.EditStructure
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
-  for w: C.Whole<C.Value(ca), C.Edit(ca)>
+  for w: C.Whole<ca>
   for a: C.Value(ca)
   {C.whole.apply(~cb, C.whole.lift.df(~ca, ~cb, ~g, w, a), C.Inc.f(ca, cb, g)(a)) == C.Inc.f(ca, cb, g)(C.whole.apply(~ca, w, a)) : C.Value(cb)}
 
