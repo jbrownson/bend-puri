@@ -9,38 +9,11 @@ import ./change.bend as C
 # edits of type Edit, which `apply` applies. A change structure is an edit
 # structure with the proof that one edit gets from any value to any other.
 
-# LAW: Value is the type of the values.
-law value:
-  for ~V: Data
-  for ~D: Data
-  for ~f: D -> V -> V
-  {C.Value(C.EditStructure{V, D, f}) == V : Data}
-
-# LAW: Edit is the type of their edits.
-law edit_type:
-  for ~V: Data
-  for ~D: Data
-  for ~f: D -> V -> V
-  {C.Edit(C.EditStructure{V, D, f}) == D : Data}
-
-# LAW: EditStructure.apply applies an edit by its function.
-law structure_apply:
-  for ~V: Data
-  for ~D: Data
-  for ~f: D -> V -> V
-  {C.EditStructure.apply(C.EditStructure{V, D, f}) == f : D -> V -> V}
-
 # LAW: an edit structure reaches when one edit gets from any value to any
 # other.
 law reaches:
   for -ce: C.EditStructure
   {C.reaches(ce) == (@a: C.Value(ce) -> @b: C.Value(ce) -> &d: C.Edit(ce) -> {C.EditStructure.apply(ce)(d, a) == b : C.Value(ce)}) : Type}
-
-# LAW: a change structure's edit structure is the one it was made from.
-law change_structure:
-  for ~s: C.EditStructure
-  for r: C.reaches(s)
-  {C.ChangeStructure.structure(C.ChangeStructure{s, r}) == s : C.EditStructure}
 
 # LAW: values with no edits of their own have Empty for edits.
 law none:
@@ -114,22 +87,6 @@ law whole_change_structure:
 # An Inc<ca, cb> is a function from values edited as ca says to values
 # edited as cb says, with its derivative: from a value and its edit, the
 # edit to the function's result.
-
-# LAW: Inc.f gives the function.
-law inc_f:
-  for ~ca: C.EditStructure
-  for ~cb: C.EditStructure
-  for ~f: C.Value(ca) -> C.Value(cb)
-  for ~df: C.Value(ca) -> C.Edit(ca) -> C.Edit(cb)
-  {C.Inc.f(ca, cb, C.Inc{f, df}) == f : C.Value(ca) -> C.Value(cb)}
-
-# LAW: Inc.df gives the derivative.
-law inc_df:
-  for ~ca: C.EditStructure
-  for ~cb: C.EditStructure
-  for ~f: C.Value(ca) -> C.Value(cb)
-  for ~df: C.Value(ca) -> C.Edit(ca) -> C.Edit(cb)
-  {C.Inc.df(ca, cb, C.Inc{f, df}) == df : C.Value(ca) -> C.Edit(ca) -> C.Edit(cb)}
 
 # LAW: an Inc is correct when applying its derivative's edit to f(a) gives
 # f of the edited value.

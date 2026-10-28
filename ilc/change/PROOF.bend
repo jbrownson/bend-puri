@@ -5,19 +5,7 @@ import ./LAWS.bend as Laws
 # How values are edited
 # ---------------------
 
-def Laws.value(V, D, f):
-  {==}
-
-def Laws.edit_type(V, D, f):
-  {==}
-
-def Laws.structure_apply(V, D, f):
-  {==}
-
 def Laws.reaches(ce):
-  {==}
-
-def Laws.change_structure(s, r):
   {==}
 
 def Laws.none(A):
@@ -55,12 +43,6 @@ def Laws.whole_change_structure(ce):
 
 # Incremental functions
 # ---------------------
-
-def Laws.inc_f(ca, cb, f, df):
-  {==}
-
-def Laws.inc_df(ca, cb, f, df):
-  {==}
 
 def Laws.inc_ok(ca, cb, g):
   {==}

@@ -9,7 +9,8 @@ with laws checked by Bend's prover.
 A module with laws has a directory of its own: the module, `LAWS.bend`,
 what it promises, and `PROOF.bend`, their proofs. The laws say what each
 operation returns, case by case, so reading them is enough to know what it
-does. Laws under "It follows that" add nothing new: they are consequences,
+does. A record's fields have no laws of their own: the record's definition
+says what they are. Laws under "It follows that" add nothing new: they are consequences,
 checked so you don't have to work them out. `PROOF.bend` at the root checks
 every module's proofs.
 
