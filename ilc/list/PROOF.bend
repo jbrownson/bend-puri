@@ -42,13 +42,19 @@ def drop_zero(A, t):
 # Edits
 # -----
 
-def Laws.patch(A, DA, ca, d, xs):
+def Laws.edit_of(ca):
   {==}
 
-def Laws.edits(A, DA, ca, e, xs):
+def Laws.change_of(ca):
   {==}
 
-def Laws.changes(A, DA, ca, d, xs):
+def Laws.edits(ca):
+  {==}
+
+def Laws.changes(ca):
+  {==}
+
+def Laws.patch(ca, d, xs):
   {==}
 
 # Lemma: insert puts x between the first i elements and the rest.
@@ -86,39 +92,37 @@ def remove_split(A, xs, i):
       %Equal.sym(List<&2, A>, L.remove(A, t, p), List.append(&2, A, List.take(&2, A, t, p), List.drop(&2, A, t, 1n+p)), remove_split(A, t, p)) : {h <> _ == h <> List.append(&2, A, List.take(&2, A, t, p), List.drop(&2, A, t, 1n+p)) : List<&2, A>}
       {==}
 
-def Laws.edit_insert(A, DA, ca, xs, i, x, v):
-  insert_split(A, xs, i, x)
+def Laws.edit_insert(ca, xs, i, x, v):
+  insert_split(C.Value(ca), xs, i, x)
 
-def Laws.edit_delete(A, DA, ca, xs, i, v):
-  remove_split(A, xs, i)
+def Laws.edit_delete(ca, xs, i, v):
+  remove_split(C.Value(ca), xs, i)
 
 # Lemma: update at a position holding x puts the changed x in its place.
 law update_inside:
-  for ~A: Data
-  for ~DA: Data
-  for ~ca: C.Changes<A, DA>
-  for xs: List<&2, A>
+  for ~ca: C.Changes
+  for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for d: DA
-  for x: A
-  for at: {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
-  {L.update(~A, ~DA, ~ca, xs, i, d) == List.append(&2, A, List.take(&2, A, xs, i), C.Changes.apply(A, DA, ca)(d, x) <> List.drop(&2, A, xs, 1n+i)) : List<&2, A>}
+  for d: C.Delta(ca)
+  for x: C.Value(ca)
+  for at: {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
+  {L.update(~ca, xs, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), C.Changes.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
 
-def update_inside(A, DA, ca, xs, i, d, x, at):
+def update_inside(ca, xs, i, d, x, at):
   match xs i:
     case Nil{} _:
-      Empty.absurd({L.update(~A, ~DA, ~ca, Nil{}, i, d) == List.append(&2, A, List.take(&2, A, Nil{}, i), C.Changes.apply(A, DA, ca)(d, x) <> List.drop(&2, A, Nil{}, 1n+i)) : List<&2, A>},
-        some_none(A, x, Equal.sym(Maybe<&2, A>, None{}, Some{x}, at)))
+      Empty.absurd({L.update(~ca, Nil{}, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), Nil{}, i), C.Changes.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), Nil{}, 1n+i)) : List<&2, C.Value(ca)>},
+        some_none(C.Value(ca), x, Equal.sym(Maybe<&2, C.Value(ca)>, None{}, Some{x}, at)))
     case Con{h, t} 0n:
-      %Equal.cong(Maybe<&2, A>, A, m => Maybe.default(&2, A, m, h), Some{h}, Some{x}, at) : {C.Changes.apply(A, DA, ca)(d, h) <> t == C.Changes.apply(A, DA, ca)(d, _) <> List.drop(&2, A, t, 0n) : List<&2, A>}
-      %Equal.sym(List<&2, A>, List.drop(&2, A, t, 0n), t, drop_zero(A, t)) : {C.Changes.apply(A, DA, ca)(d, h) <> t == C.Changes.apply(A, DA, ca)(d, h) <> _ : List<&2, A>}
+      %Equal.cong(Maybe<&2, C.Value(ca)>, C.Value(ca), m => Maybe.default(&2, C.Value(ca), m, h), Some{h}, Some{x}, at) : {C.Changes.apply(ca)(d, h) <> t == C.Changes.apply(ca)(d, _) <> List.drop(&2, C.Value(ca), t, 0n) : List<&2, C.Value(ca)>}
+      %Equal.sym(List<&2, C.Value(ca)>, List.drop(&2, C.Value(ca), t, 0n), t, drop_zero(C.Value(ca), t)) : {C.Changes.apply(ca)(d, h) <> t == C.Changes.apply(ca)(d, h) <> _ : List<&2, C.Value(ca)>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, A>, L.update(~A, ~DA, ~ca, t, p, d), List.append(&2, A, List.take(&2, A, t, p), C.Changes.apply(A, DA, ca)(d, x) <> List.drop(&2, A, t, 1n+p)), update_inside(~A, ~DA, ~ca, t, p, d, x, at)) : {h <> _ == h <> List.append(&2, A, List.take(&2, A, t, p), C.Changes.apply(A, DA, ca)(d, x) <> List.drop(&2, A, t, 1n+p)) : List<&2, A>}
+      %Equal.sym(List<&2, C.Value(ca)>, L.update(~ca, t, p, d), List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.Changes.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)), update_inside(~ca, t, p, d, x, at)) : {h <> _ == h <> List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.Changes.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)) : List<&2, C.Value(ca)>}
       {==}
 
-def Laws.edit_update_inside(A, DA, ca, xs, i, d, x, at):
-  update_inside(~A, ~DA, ~ca, xs, i, d, x, at)
+def Laws.edit_update_inside(ca, xs, i, d, x, at):
+  update_inside(~ca, xs, i, d, x, at)
 
 def Laws.edit_map_insert(A, DA, B, DB, fa, fd, i, x):
   {==}
@@ -129,7 +133,7 @@ def Laws.edit_map_delete(A, DA, B, DB, fa, fd, i):
 def Laws.edit_map_update(A, DA, B, DB, fa, fd, i, d):
   {==}
 
-def Laws.shape(A, DA, d):
+def Laws.shape(ca, d):
   {==}
 
 def Laws.map_nil(A, B, f):
@@ -243,20 +247,17 @@ def map_remove(A, B, f, xs, i):
 
 # Lemma: an update one further along a longer list passes over its head.
 law at_shift:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~cb: C.Changes<B, DB>
-  for ~g: C.Inc<A, DA, B, DB>
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
   for p: Nat
-  for m: Maybe<&2, A>
-  for d: DA
-  for y: B
-  for ys: List<&2, B>
-  {L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, 1n+p, m, d), y <> ys) == y <> L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, p, m, d), ys) : List<&2, B>}
+  for m: Maybe<&2, C.Value(ca)>
+  for d: C.Delta(ca)
+  for y: C.Value(cb)
+  for ys: List<&2, C.Value(cb)>
+  {L.patch(~cb, L.map.at(~ca, ~cb, ~g, 1n+p, m, d), y <> ys) == y <> L.patch(~cb, L.map.at(~ca, ~cb, ~g, p, m, d), ys) : List<&2, C.Value(cb)>}
 
-def at_shift(A, DA, B, DB, cb, g, p, m, d, y, ys):
+def at_shift(ca, cb, g, p, m, d, y, ys):
   match m:
     case None{}:
       {==}
@@ -266,144 +267,128 @@ def at_shift(A, DA, B, DB, cb, g, p, m, d, y, ys):
 # Lemma: mapping after an update updates the mapped element by g's
 # derivative, if g is correct.
 law map_update:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~ca: C.Changes<A, DA>
-  for ~cb: C.Changes<B, DB>
-  for ~g: C.Inc<A, DA, B, DB>
-  for ~g_ok: C.Inc.ok(A, DA, B, DB, ca, cb, g)
-  for +xs: List<&2, A>
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
+  for ~g_ok: C.Inc.ok(ca, cb, g)
+  for +xs: List<&2, C.Value(ca)>
   for +i: Nat
-  for +d: DA
-  {L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, List.get(&2, A, xs, i), d), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs)) == L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~ca, xs, i, d)) : List<&2, B>}
+  for +d: C.Delta(ca)
+  {L.patch(~cb, L.map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), d), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, xs, i, d)) : List<&2, C.Value(cb)>}
 
-def map_update(A, DA, B, DB, ca, cb, g, g_ok, xs, i, d):
+def map_update(ca, cb, g, g_ok, xs, i, d):
   match xs i:
     case Nil{} _:
       {==}
     case Con{h, t} 0n:
-      %Equal.sym(B, C.Changes.apply(B, DB, cb)(C.Inc.df(A, DA, B, DB, g)(h, d), C.Inc.f(A, DA, B, DB, g)(h)), C.Inc.f(A, DA, B, DB, g)(C.Changes.apply(A, DA, ca)(d, h)), g_ok(h, d)) : {_ <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t) == C.Inc.f(A, DA, B, DB, g)(C.Changes.apply(A, DA, ca)(d, h)) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t) : List<&2, B>}
+      %Equal.sym(C.Value(cb), C.Changes.apply(cb)(C.Inc.df(ca, cb, g)(h, d), C.Inc.f(ca, cb, g)(h)), C.Inc.f(ca, cb, g)(C.Changes.apply(ca)(d, h)), g_ok(h, d)) : {_ <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) == C.Inc.f(ca, cb, g)(C.Changes.apply(ca)(d, h)) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) : List<&2, C.Value(cb)>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, B>, L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, 1n+p, List.get(&2, A, t, p), d), C.Inc.f(A, DA, B, DB, g)(h) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t)), C.Inc.f(A, DA, B, DB, g)(h) <> L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, p, List.get(&2, A, t, p), d), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t)), at_shift(~A, ~DA, ~B, ~DB, ~cb, ~g, p, List.get(&2, A, t, p), d, C.Inc.f(A, DA, B, DB, g)(h), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t))) : {_ == C.Inc.f(A, DA, B, DB, g)(h) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~ca, t, p, d)) : List<&2, B>}
-      %Equal.sym(List<&2, B>, L.patch(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, p, List.get(&2, A, t, p), d), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), t)), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~ca, t, p, d)), map_update(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok, t, p, d)) : {C.Inc.f(A, DA, B, DB, g)(h) <> _ == C.Inc.f(A, DA, B, DB, g)(h) <> L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.update(~A, ~DA, ~ca, t, p, d)) : List<&2, B>}
+      %Equal.sym(List<&2, C.Value(cb)>, L.patch(~cb, L.map.at(~ca, ~cb, ~g, 1n+p, List.get(&2, C.Value(ca), t, p), d), C.Inc.f(ca, cb, g)(h) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t)), C.Inc.f(ca, cb, g)(h) <> L.patch(~cb, L.map.at(~ca, ~cb, ~g, p, List.get(&2, C.Value(ca), t, p), d), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t)), at_shift(~ca, ~cb, ~g, p, List.get(&2, C.Value(ca), t, p), d, C.Inc.f(ca, cb, g)(h), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t))) : {_ == C.Inc.f(ca, cb, g)(h) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, t, p, d)) : List<&2, C.Value(cb)>}
+      %Equal.sym(List<&2, C.Value(cb)>, L.patch(~cb, L.map.at(~ca, ~cb, ~g, p, List.get(&2, C.Value(ca), t, p), d), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t)), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, t, p, d)), map_update(~ca, ~cb, ~g, ~g_ok, t, p, d)) : {C.Inc.f(ca, cb, g)(h) <> _ == C.Inc.f(ca, cb, g)(h) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, t, p, d)) : List<&2, C.Value(cb)>}
       {==}
 
 # Lemma: map.edit is correct for every single edit, if g is.
 law map_edit_ok:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~ca: C.Changes<A, DA>
-  for ~cb: C.Changes<B, DB>
-  for ~g: C.Inc<A, DA, B, DB>
-  for ~g_ok: C.Inc.ok(A, DA, B, DB, ca, cb, g)
-  for xs: List<&2, A>
-  for e: L.Edit<A, DA>
-  {L.patch(~B, ~DB, ~cb, L.map.edit(~A, ~DA, ~B, ~DB, ~g, xs, e), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs)) == L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.edit(~A, ~DA, ~ca, e, xs)) : List<&2, B>}
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
+  for ~g_ok: C.Inc.ok(ca, cb, g)
+  for xs: List<&2, C.Value(ca)>
+  for e: L.Edit.of(ca)
+  {L.patch(~cb, L.map.edit(~ca, ~cb, ~g, xs, e), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)) : List<&2, C.Value(cb)>}
 
-def map_edit_ok(A, DA, B, DB, ca, cb, g, g_ok, xs, e):
+def map_edit_ok(ca, cb, g, g_ok, xs, e):
   match e:
     case L.Insert{i, x}:
-      map_insert(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i, x)
+      map_insert(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs, i, x)
     case L.Delete{i}:
-      map_remove(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i)
+      map_remove(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs, i)
     case L.Update{i, d}:
-      map_update(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok, xs, i, d)
+      map_update(~ca, ~cb, ~g, ~g_ok, xs, i, d)
 
 # Lemma: an update at a position holding an element maps to an update at
 # the same position.
 law at_shape:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~g: C.Inc<A, DA, B, DB>
-  for xs: List<&2, A>
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
+  for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for u: DA
-  for r: &x: A -> {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
-  {L.shape(~B, ~DB, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, List.get(&2, A, xs, i), u)) == L.shape(~A, ~DA, C.Edit{L.Update{i, u}}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+  for u: C.Delta(ca)
+  for r: &x: C.Value(ca) -> {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
+  {L.shape(~cb, L.map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), u)) == L.shape(~ca, C.Edit{L.Update{i, u}}) : C.Change<Unit, L.Edit<Unit, Unit>>}
 
-def at_shape(A, DA, B, DB, g, xs, i, u, r):
+def at_shape(ca, cb, g, xs, i, u, r):
   match r:
     case (x, at):
-      %Equal.sym(Maybe<&2, A>, List.get(&2, A, xs, i), Some{x}, at) : {L.shape(~B, ~DB, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, _, u)) == L.shape(~A, ~DA, C.Edit{L.Update{i, u}}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {L.shape(~cb, L.map.at(~ca, ~cb, ~g, i, _, u)) == L.shape(~ca, C.Edit{L.Update{i, u}}) : C.Change<Unit, L.Edit<Unit, Unit>>}
       {==}
 
 # Lemma: an update at a position holding an element maps to an update
 # valid for the mapped list, if its position is in range there.
 law at_valid_at:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~cb: C.Changes<B, DB>
-  for ~g: C.Inc<A, DA, B, DB>
-  for xs: List<&2, A>
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
+  for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for u: DA
-  for r: &x: A -> {List.get(&2, A, xs, i) == Some{x} : Maybe<&2, A>}
-  for w: Laws.has(B, L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs), i)
-  Laws.valid(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, List.get(&2, A, xs, i), u), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs))
+  for u: C.Delta(ca)
+  for r: &x: C.Value(ca) -> {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
+  for w: Laws.has(C.Value(cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), i)
+  Laws.valid(~cb, L.map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), u), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
 
-def at_valid_at(A, DA, B, DB, cb, g, xs, i, u, r, w):
+def at_valid_at(ca, cb, g, xs, i, u, r, w):
   match r:
     case (x, at):
-      %Equal.sym(Maybe<&2, A>, List.get(&2, A, xs, i), Some{x}, at) : Laws.valid(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, _, u), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs))
+      %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : Laws.valid(~cb, L.map.at(~ca, ~cb, ~g, i, _, u), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
       w
 
 # Lemma: a valid update maps to a valid update.
 law at_valid:
-  for ~A: Data
-  for ~DA: Data
-  for ~B: Data
-  for ~DB: Data
-  for ~cb: C.Changes<B, DB>
-  for ~g: C.Inc<A, DA, B, DB>
-  for +xs: List<&2, A>
+  for ~ca: C.Changes
+  for ~cb: C.Changes
+  for ~g: C.Inc<ca, cb>
+  for +xs: List<&2, C.Value(ca)>
   for +i: Nat
-  for u: DA
-  for +v: Laws.has(A, xs, i)
-  Laws.valid(~B, ~DB, ~cb, L.map.at(~A, ~DA, ~B, ~DB, ~g, i, List.get(&2, A, xs, i), u), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs))
+  for u: C.Delta(ca)
+  for +v: Laws.has(C.Value(ca), xs, i)
+  Laws.valid(~cb, L.map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), u), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
 
-def at_valid(A, DA, B, DB, cb, g, xs, i, u, v):
-  at_valid_at(~A, ~DA, ~B, ~DB, ~cb, ~g, xs, i, u, has_get(A, xs, i, v), has_map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i, v))
+def at_valid(ca, cb, g, xs, i, u, v):
+  at_valid_at(~ca, ~cb, ~g, xs, i, u, has_get(C.Value(ca), xs, i, v), has_map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs, i, v))
 
-def Laws.map_inc(A, DA, B, DB, ca, g):
+def Laws.map_inc(ca, cb, g):
   {==}
 
-def Laws.dmap_keep(A, DA, B, DB, ca, g, xs):
+def Laws.dmap_keep(ca, cb, g, xs):
   {==}
 
-def Laws.dmap_replace(A, DA, B, DB, ca, g, ys, xs):
+def Laws.dmap_replace(ca, cb, g, ys, xs):
   {==}
 
-def Laws.dmap_insert(A, DA, B, DB, ca, g, i, x, xs):
+def Laws.dmap_insert(ca, cb, g, i, x, xs):
   {==}
 
-def Laws.dmap_delete(A, DA, B, DB, ca, g, i, xs):
+def Laws.dmap_delete(ca, cb, g, i, xs):
   {==}
 
-def Laws.dmap_update_inside(A, DA, B, DB, ca, g, xs, i, d, x, at):
-  %Equal.sym(Maybe<&2, A>, List.get(&2, A, xs, i), Some{x}, at) : {L.map.at(~A, ~DA, ~B, ~DB, ~g, i, _, d) == C.Edit{L.Update{i, C.Inc.df(A, DA, B, DB, g)(x, d)}} : L.Change(B, DB)}
+def Laws.dmap_update_inside(ca, cb, g, xs, i, d, x, at):
+  %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {L.map.at(~ca, ~cb, ~g, i, _, d) == C.Edit{L.Update{i, C.Inc.df(ca, cb, g)(x, d)}} : L.Change(cb)}
   {==}
 
-def Laws.dmap_then(A, DA, B, DB, ca, g, p, q, xs):
+def Laws.dmap_then(ca, cb, g, p, q, xs):
   {==}
 
 # map.inc(g) is lift applied to map.edit, so lift's law gives it.
-def Laws.map_inc_ok(A, DA, B, DB, ca, cb, g, g_ok):
-  CL.lift_ok(~List<&2, A>, ~L.Edit<A, DA>, ~List<&2, B>, ~L.Edit<B, DB>, ~L.edits(~A, ~DA, ~ca), ~L.edits(~B, ~DB, ~cb),
-    ~C.Inc{ys => L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), ys), ys => e => L.map.edit(~A, ~DA, ~B, ~DB, ~g, ys, e)},
-    ~(xs => e => map_edit_ok(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok, xs, e)))
+def Laws.map_inc_ok(ca, cb, g, g_ok):
+  CL.lift_ok(~L.edits(~ca), ~L.edits(~cb),
+    ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)},
+    ~(xs => e => map_edit_ok(~ca, ~cb, ~g, ~g_ok, xs, e)))
 
 # By induction on the change; a single edit maps to an edit of the same
 # kind at the same position, since a valid update finds its element.
-def Laws.dmap_local(A, DA, B, DB, ca, g, d, xs, v):
+def Laws.dmap_local(ca, cb, g, d, xs, v):
   match d:
     case C.Keep{}:
       {==}
@@ -416,17 +401,17 @@ def Laws.dmap_local(A, DA, B, DB, ca, g, d, xs, v):
         case L.Delete{i}:
           {==}
         case L.Update{+i, u}:
-          at_shape(~A, ~DA, ~B, ~DB, ~g, xs, i, u, has_get(A, xs, i, v))
+          at_shape(~ca, ~cb, ~g, xs, i, u, has_get(C.Value(ca), xs, i, v))
     case C.Then{+p, q}:
       (vp, vq) = v
-      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, p, xs)), L.shape(~A, ~DA, p), Laws.dmap_local(~A, ~DA, ~B, ~DB, ~ca, ~g, p, xs, vp)) : {C.Then{_, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, q, L.patch(~A, ~DA, ~ca, p, xs)))} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
-      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~B, ~DB, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, q, L.patch(~A, ~DA, ~ca, p, xs))), L.shape(~A, ~DA, q), Laws.dmap_local(~A, ~DA, ~B, ~DB, ~ca, ~g, q, L.patch(~A, ~DA, ~ca, p, xs), vq)) : {C.Then{L.shape(~A, ~DA, p), _} == C.Then{L.shape(~A, ~DA, p), L.shape(~A, ~DA, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~cb, L.dmap(~ca, ~cb, ~g, p, xs)), L.shape(~ca, p), Laws.dmap_local(~ca, ~cb, ~g, p, xs, vp)) : {C.Then{_, L.shape(~cb, L.dmap(~ca, ~cb, ~g, q, L.patch(~ca, p, xs)))} == C.Then{L.shape(~ca, p), L.shape(~ca, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
+      %Equal.sym(C.Change<Unit, L.Edit<Unit, Unit>>, L.shape(~cb, L.dmap(~ca, ~cb, ~g, q, L.patch(~ca, p, xs))), L.shape(~ca, q), Laws.dmap_local(~ca, ~cb, ~g, q, L.patch(~ca, p, xs), vq)) : {C.Then{L.shape(~ca, p), _} == C.Then{L.shape(~ca, p), L.shape(~ca, q)} : C.Change<Unit, L.Edit<Unit, Unit>>}
       {==}
 
 # By induction on the change: a valid edit's position is in range for the
 # mapped list too, and after the first part of a Then, the mapped list is
 # the list the first part produced, mapped.
-def Laws.dmap_valid(A, DA, B, DB, ca, cb, g, g_ok, d, xs, v):
+def Laws.dmap_valid(ca, cb, g, g_ok, d, xs, v):
   match d:
     case C.Keep{}:
       Unit{}
@@ -435,12 +420,12 @@ def Laws.dmap_valid(A, DA, B, DB, ca, cb, g, g_ok, d, xs, v):
     case C.Edit{e}:
       match e:
         case L.Insert{i, x}:
-          gap_map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i, v)
+          gap_map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs, i, v)
         case L.Delete{i}:
-          has_map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs, i, v)
+          has_map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs, i, v)
         case L.Update{+i, u}:
-          at_valid(~A, ~DA, ~B, ~DB, ~cb, ~g, xs, i, u, v)
+          at_valid(~ca, ~cb, ~g, xs, i, u, v)
     case C.Then{+p, q}:
       (vp, vq) = v
-      %Equal.sym(List<&2, B>, L.patch(~B, ~DB, ~cb, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, p, xs), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs)), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), L.patch(~A, ~DA, ~ca, p, xs)), Laws.map_inc_ok(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok)(xs, p)) : Laws.valid(~B, ~DB, ~cb, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, p, xs), L.map(~A, ~B, ~C.Inc.f(A, DA, B, DB, g), xs)) & Laws.valid(~B, ~DB, ~cb, L.dmap(~A, ~DA, ~B, ~DB, ~ca, ~g, q, L.patch(~A, ~DA, ~ca, p, xs)), _)
-      (Laws.dmap_valid(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok, p, xs, vp), Laws.dmap_valid(~A, ~DA, ~B, ~DB, ~ca, ~cb, ~g, ~g_ok, q, L.patch(~A, ~DA, ~ca, p, xs), vq))
+      %Equal.sym(List<&2, C.Value(cb)>, L.patch(~cb, L.dmap(~ca, ~cb, ~g, p, xs), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.patch(~ca, p, xs)), Laws.map_inc_ok(~ca, ~cb, ~g, ~g_ok)(xs, p)) : Laws.valid(~cb, L.dmap(~ca, ~cb, ~g, p, xs), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) & Laws.valid(~cb, L.dmap(~ca, ~cb, ~g, q, L.patch(~ca, p, xs)), _)
+      (Laws.dmap_valid(~ca, ~cb, ~g, ~g_ok, p, xs, vp), Laws.dmap_valid(~ca, ~cb, ~g, ~g_ok, q, L.patch(~ca, p, xs), vq))
