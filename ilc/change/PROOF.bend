@@ -32,7 +32,7 @@ def Laws.apply_edit(ce, e, a):
 def Laws.apply_then(ce, p, q, a):
   {==}
 
-def Laws.change_structure(ce):
+def Laws.complete(ce):
   {==}
 
 def Laws.then_keep_left(ce, q, a):
@@ -94,11 +94,11 @@ def Laws.lift_then(ca, cb, g, p, q, a):
 law lift_df_ok:
   for ~ca: C.ChangeStructure
   for ~cb: C.ChangeStructure
-  for ~g: C.Inc<ca, C.Change.structure(~cb)>
-  for ~g_ok: C.Inc.ok(ca, C.Change.structure(~cb), g)
+  for ~g: C.Inc<ca, C.complete(~cb)>
+  for ~g_ok: C.Inc.ok(ca, C.complete(~cb), g)
   for d: C.Change.of(ca)
   for +a: C.Value(ca)
-  {C.apply(~cb, C.lift.df(~ca, ~cb, ~g, d, a), C.Inc.f(ca, C.Change.structure(~cb), g)(a)) == C.Inc.f(ca, C.Change.structure(~cb), g)(C.apply(~ca, d, a)) : C.Value(cb)}
+  {C.apply(~cb, C.lift.df(~ca, ~cb, ~g, d, a), C.Inc.f(ca, C.complete(~cb), g)(a)) == C.Inc.f(ca, C.complete(~cb), g)(C.apply(~ca, d, a)) : C.Value(cb)}
 
 # By induction on the change: after the first part of a Then, the lifted
 # derivative of the rest starts from the value the first part produced.
@@ -111,7 +111,7 @@ def lift_df_ok(ca, cb, g, g_ok, d, a):
     case C.Edit{e}:
       g_ok(a, e)
     case C.Then{+p, q}:
-      %Equal.sym(C.Value(cb), C.apply(~cb, C.lift.df(~ca, ~cb, ~g, p, a), C.Inc.f(ca, C.Change.structure(~cb), g)(a)), C.Inc.f(ca, C.Change.structure(~cb), g)(C.apply(~ca, p, a)), lift_df_ok(~ca, ~cb, ~g, ~g_ok, p, a)) : {C.apply(~cb, C.lift.df(~ca, ~cb, ~g, q, C.apply(~ca, p, a)), _) == C.Inc.f(ca, C.Change.structure(~cb), g)(C.apply(~ca, q, C.apply(~ca, p, a))) : C.Value(cb)}
+      %Equal.sym(C.Value(cb), C.apply(~cb, C.lift.df(~ca, ~cb, ~g, p, a), C.Inc.f(ca, C.complete(~cb), g)(a)), C.Inc.f(ca, C.complete(~cb), g)(C.apply(~ca, p, a)), lift_df_ok(~ca, ~cb, ~g, ~g_ok, p, a)) : {C.apply(~cb, C.lift.df(~ca, ~cb, ~g, q, C.apply(~ca, p, a)), _) == C.Inc.f(ca, C.complete(~cb), g)(C.apply(~ca, q, C.apply(~ca, p, a))) : C.Value(cb)}
       lift_df_ok(~ca, ~cb, ~g, ~g_ok, q, C.apply(~ca, p, a))
 
 def Laws.lift_ok(ca, cb, g, g_ok):

@@ -17,10 +17,6 @@ type Edit<-A: Data, -DA: Data> is Data:
 def Edit.of(-ca: C.ChangeStructure) -> Data:
   Edit<C.Value(ca), C.Delta(ca)>
 
-# A change to a list whose elements change as ca says.
-def Change.of(-ca: C.ChangeStructure) -> Data:
-  C.Change<List<&2, C.Value(ca)>, Edit.of(ca)>
-
 def insert(-A: Data, xs: List<&2, A>, i: Nat, x: A) -> List<&2, A>:
   match xs i:
     case Nil{} _:
@@ -58,17 +54,15 @@ def edit(~ca: C.ChangeStructure, e: Edit.of(ca), xs: List<&2, C.Value(ca)>) -> L
     case Update{i, d}:
       update(~ca, xs, i, d)
 
-# How a list changes by one edit, given how its elements change.
-def Edit.structure(~ca: C.ChangeStructure) -> C.ChangeStructure:
+# How a list changes by one edit, given how its elements change. Its
+# changes are single edits; C.complete(~structure(~ca)) adds keeping,
+# replacing and one change then another.
+def structure(~ca: C.ChangeStructure) -> C.ChangeStructure:
   C.ChangeStructure{List<&2, C.Value(ca)>, Edit.of(ca), e => xs => edit(~ca, e, xs)}
 
-# How a list changes by a change: Change's apply, with a list's edits.
-def Change.structure(~ca: C.ChangeStructure) -> C.ChangeStructure:
-  C.Change.structure(~Edit.structure(~ca))
-
 # The list after a change.
-def patch(~ca: C.ChangeStructure, d: Change.of(ca), xs: List<&2, C.Value(ca)>) -> List<&2, C.Value(ca)>:
-  C.apply(~Edit.structure(~ca), d, xs)
+def patch(~ca: C.ChangeStructure, d: C.Change.of(structure(~ca)), xs: List<&2, C.Value(ca)>) -> List<&2, C.Value(ca)>:
+  C.apply(~structure(~ca), d, xs)
 
 def map(~A: Data, ~B: Data, ~f: A -> B, xs: List<&2, A>) -> List<&2, B>:
   match xs:
@@ -81,7 +75,7 @@ def map(~A: Data, ~B: Data, ~f: A -> B, xs: List<&2, A>) -> List<&2, B>:
 # at i: its image, updated by g's derivative. Past the end there is no
 # element, and the update changes nothing.
 def map.at(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, i: Nat, m: Maybe<&2, C.Value(ca)>,
-  d: C.Delta(ca)) -> Change.of(cb):
+  d: C.Delta(ca)) -> C.Change.of(structure(~cb)):
   match m:
     case None{}:
       C.Keep{}
@@ -92,7 +86,7 @@ def map.at(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, i:
 # delete carries over, and an update updates the same position by g's
 # derivative.
 def map.edit(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, xs: List<&2, C.Value(ca)>,
-  e: Edit.of(ca)) -> Change.of(cb):
+  e: Edit.of(ca)) -> C.Change.of(structure(~cb)):
   match e:
     case Insert{i, x}:
       C.Edit{Insert{i, C.Inc.f(ca, cb, g)(x)}}
@@ -103,15 +97,15 @@ def map.edit(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, 
 
 # map's derivative: the change to the list g maps to, from the list and its
 # change, lifted from map.edit.
-def dmap(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, d: Change.of(ca), +xs: List<&2, C.Value(ca)>) ->
-  Change.of(cb):
-  C.lift.df(~Edit.structure(~ca), ~Edit.structure(~cb),
+def dmap(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, d: C.Change.of(structure(~ca)), +xs: List<&2, C.Value(ca)>) ->
+  C.Change.of(structure(~cb)):
+  C.lift.df(~structure(~ca), ~structure(~cb),
     ~C.Inc{ys => map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => map.edit(~ca, ~cb, ~g, ys, e)},
     d, xs)
 
 # map, as an incremental function: g's function mapped over a list, with
 # dmap as its derivative.
-def map.inc(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>) -> C.Inc<Change.structure(~ca), Change.structure(~cb)>:
+def map.inc(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>) -> C.Inc<C.complete(~structure(~ca)), C.complete(~structure(~cb))>:
   C.Inc{xs => map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => dmap(~ca, ~cb, ~g, d, xs)}
 
 # An edit with its element mapped by fa and its element change by fd.
@@ -126,6 +120,6 @@ def Edit.map(~A: Data, ~DA: Data, ~B: Data, ~DB: Data, ~fa: A -> B, ~fd: DA -> D
       Update{i, fd(d)}
 
 # Where a list change acts: the change with its values left out.
-def shape(~ca: C.ChangeStructure, d: Change.of(ca)) -> C.Change<Unit, Edit<Unit, Unit>>:
+def shape(~ca: C.ChangeStructure, d: C.Change.of(structure(~ca))) -> C.Change<Unit, Edit<Unit, Unit>>:
   C.map(~List<&2, C.Value(ca)>, ~Edit.of(ca), ~Unit, ~Edit<Unit, Unit>, ~(xs => Unit{}),
     ~(e => Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d)

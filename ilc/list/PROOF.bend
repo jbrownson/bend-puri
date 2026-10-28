@@ -45,13 +45,7 @@ def drop_zero(A, t):
 def Laws.edit_of(ca):
   {==}
 
-def Laws.change_of(ca):
-  {==}
-
-def Laws.edit_structure(ca):
-  {==}
-
-def Laws.change_structure(ca):
+def Laws.structure(ca):
   {==}
 
 def Laws.patch(ca, d, xs):
@@ -374,7 +368,7 @@ def Laws.dmap_delete(ca, cb, g, i, xs):
   {==}
 
 def Laws.dmap_update_inside(ca, cb, g, xs, i, d, x, at):
-  %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {L.map.at(~ca, ~cb, ~g, i, _, d) == C.Edit{L.Update{i, C.Inc.df(ca, cb, g)(x, d)}} : L.Change.of(cb)}
+  %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {L.map.at(~ca, ~cb, ~g, i, _, d) == C.Edit{L.Update{i, C.Inc.df(ca, cb, g)(x, d)}} : C.Change.of(L.structure(~cb))}
   {==}
 
 def Laws.dmap_then(ca, cb, g, p, q, xs):
@@ -382,7 +376,7 @@ def Laws.dmap_then(ca, cb, g, p, q, xs):
 
 # map.inc(g) is lift applied to map.edit, so lift's law gives it.
 def Laws.map_inc_ok(ca, cb, g, g_ok):
-  CL.lift_ok(~L.Edit.structure(~ca), ~L.Edit.structure(~cb),
+  CL.lift_ok(~L.structure(~ca), ~L.structure(~cb),
     ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)},
     ~(xs => e => map_edit_ok(~ca, ~cb, ~g, ~g_ok, xs, e)))
 

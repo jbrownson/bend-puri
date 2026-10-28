@@ -59,8 +59,9 @@ def apply(~ce: ChangeStructure, d: Change.of(ce), a: Value(ce)) -> Value(ce):
     case Then{p, q}:
       apply(~ce, q, apply(~ce, p, a))
 
-# How a Change of ce's edits changes values.
-def Change.structure(~ce: ChangeStructure) -> ChangeStructure:
+# Completes ce, whose changes are edits, into a full change structure:
+# its changes are Changes of ce's edits, which C.apply applies.
+def complete(~ce: ChangeStructure) -> ChangeStructure:
   ChangeStructure{Value(ce), Change.of(ce), d => a => apply(~ce, d, a)}
 
 # An incremental function, from values that change as ca says to values
@@ -87,26 +88,26 @@ def Inc.ok(-ca: ChangeStructure, -cb: ChangeStructure, g: Inc<ca, cb>) -> Type:
 # The derivative lift builds from g's: one edit is g's, a replacement
 # replaces the result, and one change then another lifts the second from
 # the value the first produced.
-def lift.df(~ca: ChangeStructure, ~cb: ChangeStructure, ~g: Inc<ca, Change.structure(~cb)>, d: Change.of(ca), +a: Value(ca)) ->
+def lift.df(~ca: ChangeStructure, ~cb: ChangeStructure, ~g: Inc<ca, complete(~cb)>, d: Change.of(ca), +a: Value(ca)) ->
   Change.of(cb):
   match d:
     case Keep{}:
       Keep{}
     case Replace{x}:
-      Replace{Inc.f(ca, Change.structure(~cb), g)(x)}
+      Replace{Inc.f(ca, complete(~cb), g)(x)}
     case Edit{e}:
-      Inc.df(ca, Change.structure(~cb), g)(a, e)
+      Inc.df(ca, complete(~cb), g)(a, e)
     case Then{+p, q}:
       Then{lift.df(~ca, ~cb, ~g, p, a), lift.df(~ca, ~cb, ~g, q, apply(~ca, p, a))}
 
 # Lifts g, whose derivative handles one edit as ca says, to an Inc whose
 # derivative handles any change.
-def lift(~ca: ChangeStructure, ~cb: ChangeStructure, ~g: Inc<ca, Change.structure(~cb)>) -> Inc<Change.structure(~ca), Change.structure(~cb)>:
-  Inc{Inc.f(ca, Change.structure(~cb), g), a => d => lift.df(~ca, ~cb, ~g, d, a)}
+def lift(~ca: ChangeStructure, ~cb: ChangeStructure, ~g: Inc<ca, complete(~cb)>) -> Inc<complete(~ca), complete(~cb)>:
+  Inc{Inc.f(ca, complete(~cb), g), a => d => lift.df(~ca, ~cb, ~g, d, a)}
 
 # f, with the derivative that recomputes: whatever the change, replace the
 # result.
-def recompute(~ca: ChangeStructure, ~cb: ChangeStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, Change.structure(~cb)>:
+def recompute(~ca: ChangeStructure, ~cb: ChangeStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, complete(~cb)>:
   Inc{f, a => d => Replace{f(ChangeStructure.apply(ca)(d, a))}}
 
 # A change with its values mapped by fa and its edits by fe: the same
