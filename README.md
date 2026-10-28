@@ -39,10 +39,11 @@ input's change instead of recomputing it):
   of their edits (`Edit`), and how to apply one. A change structure
   (`ChangeStructure`) is an edit structure with the proof that one edit gets
   from any value to any other, which a list's single edits can't give.
-  `complete` makes a change structure from any edit structure: its edits are
-  `Change`s (`changes`), an optional new value to start over from, then a
-  run of edits. That adds no change (`keep`), starting over (`replace`), and
-  one change then another (`then`). An `Inc<ca, cb>` pairs a function, from
+  `runs` are an edit structure's edits one after another, and `complete`
+  makes a change structure from any edit structure: its edits are `Change`s
+  (`changes`), an optional new value to start over from, then a run of
+  edits. That adds no change (`keep`), starting over (`replace`), and one
+  change then another (`then`). An `Inc<ca, cb>` pairs a function, from
   values edited as `ca` says to values edited as `cb` says, with its
   derivative, which gives the change to the function's result from a change
   to its input. `lift` turns an `Inc` whose derivative handles single edits
@@ -56,9 +57,10 @@ input's change instead of recomputing it):
   type, with their own way to apply: a `Change` of the element, or something
   else entirely. The laws cover changes whose positions are in range
   (`valid`), and say what each edit does, that a list's own edits aren't a
-  change structure, what `dmap` returns for each kind of change, that
-  `map.inc(g)` is correct when `g` is, that `dmap` acts exactly where the
-  change acts, and that it turns valid changes into valid ones.
+  change structure but its runs of edits are, without replacing, what `dmap`
+  returns for each kind of change, that `map.inc(g)` is correct when `g` is,
+  that `dmap` acts exactly where the change acts, and that it turns valid
+  changes into valid ones.
 
 The approach follows Phil Freeman's
 [Purview](https://github.com/paf31/purescript-purview), a PureScript UI

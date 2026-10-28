@@ -90,6 +90,90 @@ def edit_nil_two(ca, x, r):
 def Laws.edits_not_change_structure(ca, x, h):
   edit_nil_two(~ca, x, h(Nil{}, [x, x]))
 
+# Deletes every element of xs, front first.
+def clear(~ca: C.EditStructure, xs: List<&2, C.Value(ca)>) -> List<&2, L.Edit.of(ca)>:
+  match xs:
+    case Nil{}:
+      Nil{}
+    case Con{h, t}:
+      L.Delete{0n} <> clear(~ca, t)
+
+# Builds ys from the empty list: its tail, then its head at the front.
+def fill(~ca: C.EditStructure, ys: List<&2, C.Value(ca)>) -> List<&2, L.Edit.of(ca)>:
+  match ys:
+    case Nil{}:
+      Nil{}
+    case Con{y, t}:
+      List.append(&2, L.Edit.of(ca), fill(~ca, t), [L.Insert{0n, y}])
+
+# Lemma: clearing a list leaves nothing.
+law run_clear:
+  for ~ca: C.EditStructure
+  for +xs: List<&2, C.Value(ca)>
+  {C.run(~L.edit_structure(~ca), clear(~ca, xs), xs) == Nil{} : List<&2, C.Value(ca)>}
+
+def run_clear(ca, xs):
+  match xs:
+    case Nil{}:
+      {==}
+    case Con{h, t}:
+      run_clear(~ca, t)
+
+# Lemma: inserting at 0 puts y at the front.
+law insert_front:
+  for -A: Data
+  for t: List<&2, A>
+  for y: A
+  {L.insert(A, t, 0n, y) == y <> t : List<&2, A>}
+
+def insert_front(A, t, y):
+  match t:
+    case Nil{}:
+      {==}
+    case Con{h, r}:
+      {==}
+
+# Lemma: filling the empty list with ys gives ys.
+law run_fill:
+  for ~ca: C.EditStructure
+  for ys: List<&2, C.Value(ca)>
+  {C.run(~L.edit_structure(~ca), fill(~ca, ys), Nil{}) == ys : List<&2, C.Value(ca)>}
+
+def run_fill(ca, ys):
+  match ys:
+    case Nil{}:
+      {==}
+    case Con{+y, +t}:
+      %Equal.sym(List<&2, C.Value(ca)>, C.run(~L.edit_structure(~ca), List.append(&2, L.Edit.of(ca), fill(~ca, t), [L.Insert{0n, y}]), Nil{}), C.run(~L.edit_structure(~ca), [L.Insert{0n, y}], C.run(~L.edit_structure(~ca), fill(~ca, t), Nil{})), CP.run_append(~L.edit_structure(~ca), fill(~ca, t), [L.Insert{0n, y}], Nil{})) : {_ == y <> t : List<&2, C.Value(ca)>}
+      %Equal.sym(List<&2, C.Value(ca)>, C.run(~L.edit_structure(~ca), fill(~ca, t), Nil{}), t, run_fill(~ca, t)) : {C.run(~L.edit_structure(~ca), [L.Insert{0n, y}], _) == y <> t : List<&2, C.Value(ca)>}
+      insert_front(C.Value(ca), t, y)
+
+# Lemma: clearing xs and then filling with ys gets from xs to ys.
+law clear_fill:
+  for ~ca: C.EditStructure
+  for +xs: List<&2, C.Value(ca)>
+  for +ys: List<&2, C.Value(ca)>
+  {C.run(~L.edit_structure(~ca), List.append(&2, L.Edit.of(ca), clear(~ca, xs), fill(~ca, ys)), xs) == ys : List<&2, C.Value(ca)>}
+
+def clear_fill(ca, xs, ys):
+  %Equal.sym(List<&2, C.Value(ca)>, C.run(~L.edit_structure(~ca), List.append(&2, L.Edit.of(ca), clear(~ca, xs), fill(~ca, ys)), xs), C.run(~L.edit_structure(~ca), fill(~ca, ys), C.run(~L.edit_structure(~ca), clear(~ca, xs), xs)), CP.run_append(~L.edit_structure(~ca), clear(~ca, xs), fill(~ca, ys), xs)) : {_ == ys : List<&2, C.Value(ca)>}
+  %Equal.sym(List<&2, C.Value(ca)>, C.run(~L.edit_structure(~ca), clear(~ca, xs), xs), Nil{}, run_clear(~ca, xs)) : {C.run(~L.edit_structure(~ca), fill(~ca, ys), _) == ys : List<&2, C.Value(ca)>}
+  run_fill(~ca, ys)
+
+# Lemma: one run gets from xs to ys.
+law runs_reach_at:
+  for ~ca: C.EditStructure
+  for +xs: List<&2, C.Value(ca)>
+  for +ys: List<&2, C.Value(ca)>
+  exs es: List<&2, L.Edit.of(ca)>
+  {C.run(~L.edit_structure(~ca), es, xs) == ys : List<&2, C.Value(ca)>}
+
+def runs_reach_at(ca, xs, ys):
+  (List.append(&2, L.Edit.of(ca), clear(~ca, xs), fill(~ca, ys)), clear_fill(~ca, xs, ys))
+
+def Laws.runs_reach(ca):
+  xs => ys => runs_reach_at(~ca, xs, ys)
+
 def Laws.patch(ca, d, xs):
   {==}
 

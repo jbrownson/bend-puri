@@ -52,6 +52,15 @@ def Laws.then_start(ce, p, y, es):
 def Laws.then_edits(ce, s, ps, qs):
   {==}
 
+def Laws.run_nil(ce, a):
+  {==}
+
+def Laws.run_con(ce, e, es, a):
+  {==}
+
+def Laws.runs(ce):
+  {==}
+
 def Laws.changes(ce):
   {==}
 

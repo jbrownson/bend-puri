@@ -83,6 +83,13 @@ law edits_not_change_structure:
   for h: C.reaches(L.edit_structure(~ca))
   Empty
 
+# LAW: a list's runs of edits are a change structure, without replacing:
+# deleting every element, then inserting the other list's, gets from any
+# list to any other.
+law runs_reach:
+  for ~ca: C.EditStructure
+  C.reaches(C.runs(~L.edit_structure(~ca)))
+
 # LAW: patching applies a list change, edit by edit.
 law patch:
   for ~ca: C.EditStructure

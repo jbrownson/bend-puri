@@ -84,6 +84,10 @@ def run(~ce: EditStructure, es: List<&2, Edit(ce)>, a: Value(ce)) -> Value(ce):
     case Con{e, t}:
       run(~ce, t, EditStructure.apply(ce)(e, a))
 
+# Runs of ce's edits, applied in order.
+def runs(~ce: EditStructure) -> EditStructure:
+  EditStructure{Value(ce), List<&2, Edit(ce)>, es => a => run(~ce, es, a)}
+
 # The value a change starts from: its new value if it has one, else a.
 def start(-A: Data, m: Maybe<&2, A>, a: A) -> A:
   match m:

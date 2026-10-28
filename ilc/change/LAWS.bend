@@ -110,6 +110,25 @@ law then_edits:
   for qs: List<&2, C.Edit(ce)>
   {C.then(ce, C.Change{s, ps}, C.Change{None{}, qs}) == C.Change{s, List.append(&2, C.Edit(ce), ps, qs)} : C.Change.of(ce)}
 
+# LAW: a run of no edits leaves the value as it is.
+law run_nil:
+  for ~ce: C.EditStructure
+  for a: C.Value(ce)
+  {C.run(~ce, Nil{}, a) == a : C.Value(ce)}
+
+# LAW: a run applies its first edit, then the rest.
+law run_con:
+  for ~ce: C.EditStructure
+  for e: C.Edit(ce)
+  for es: List<&2, C.Edit(ce)>
+  for a: C.Value(ce)
+  {C.run(~ce, e <> es, a) == C.run(~ce, es, C.EditStructure.apply(ce)(e, a)) : C.Value(ce)}
+
+# LAW: runs of ce's edits change ce's values by C.run.
+law runs:
+  for ~ce: C.EditStructure
+  {C.runs(~ce) == C.EditStructure{C.Value(ce), List<&2, C.Edit(ce)>, es => a => C.run(~ce, es, a)} : C.EditStructure}
+
 # LAW: Changes of ce's edits change ce's values by C.apply.
 law changes:
   for ~ce: C.EditStructure
