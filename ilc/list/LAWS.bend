@@ -56,11 +56,11 @@ def valid(~ca: C.EditStructure, d: C.Change.of(L.edit_structure(~ca)), +xs: List
 # Edits
 # -----
 # A list's elements are edited as ca says: a value that only changes
-# whole by C.complete(~C.whole(~A)), a list by
-# C.complete(~L.edit_structure(~cb)). L.edit_structure(ca) is a list's own
+# whole by C.changes(~C.whole(~A)), a list by
+# C.changes(~L.edit_structure(~cb)). L.edit_structure(ca) is a list's own
 # edit structure, one L.Edit.of(ca) at a time; it isn't a change
-# structure, and its completion is, adding keeping, replacing and one
-# change then another. List.take(xs, i) is the first i elements,
+# structure, and C.complete makes one from it, adding keeping, replacing
+# and one change then another. List.take(xs, i) is the first i elements,
 # List.drop(xs, i) the rest, and List.get(xs, i) the element at i, or None
 # past the end.
 
@@ -75,11 +75,12 @@ law edit_structure:
   {L.edit_structure(~ca) == C.EditStructure{List<&2, C.Value(ca)>, L.Edit.of(ca), e => xs => L.edit(~ca, e, xs)} : C.EditStructure}
 
 # LAW: a list's own edits are not a change structure, if it has elements
-# at all: no one edit gets from the empty list to a list of two.
+# at all: no one edit gets from the empty list to a list of two, so they
+# don't reach.
 law edits_not_change_structure:
   for ~ca: C.EditStructure
   for +x: C.Value(ca)
-  for h: C.ChangeStructure(L.edit_structure(~ca))
+  for h: C.reaches(L.edit_structure(~ca))
   Empty
 
 # LAW: patching applies a list change, edit by edit.
@@ -191,7 +192,7 @@ law map_inc:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
   for ~g: C.Inc<ca, cb>
-  {L.map.inc(~ca, ~cb, ~g) == C.Inc{xs => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => L.dmap(~ca, ~cb, ~g, d, xs)} : C.Inc<C.complete(~L.edit_structure(~ca)), C.complete(~L.edit_structure(~cb))>}
+  {L.map.inc(~ca, ~cb, ~g) == C.Inc{xs => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => L.dmap(~ca, ~cb, ~g, d, xs)} : C.Inc<C.changes(~L.edit_structure(~ca)), C.changes(~L.edit_structure(~cb))>}
 
 # LAW: keeping the list keeps the mapped list.
 law dmap_keep:
@@ -262,7 +263,7 @@ law map_inc_ok:
   for ~cb: C.EditStructure
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
-  C.Inc.ok(C.complete(~L.edit_structure(~ca)), C.complete(~L.edit_structure(~cb)), L.map.inc(~ca, ~cb, ~g))
+  C.Inc.ok(C.changes(~L.edit_structure(~ca)), C.changes(~L.edit_structure(~cb)), L.map.inc(~ca, ~cb, ~g))
 
 # LAW: dmap is local: it acts exactly where a valid change acts.
 law dmap_local:

@@ -22,10 +22,19 @@ def EditStructure.apply(c: EditStructure) -> Edit(c) -> Value(c) -> Value(c):
     case EditStructure{v, d, f}:
       f
 
-# An edit structure is a change structure when one edit gets from any
-# value to any other.
-def ChangeStructure(-ce: EditStructure) -> Type:
+# One edit gets from any value to any other.
+def reaches(-ce: EditStructure) -> Type:
   @a: Value(ce) -> @b: Value(ce) -> &d: Edit(ce) -> {EditStructure.apply(ce)(d, a) == b : Value(ce)}
+
+# A change structure: an edit structure, with the proof that one edit gets
+# from any value to any other.
+type ChangeStructure is Type:
+  ChangeStructure{structure: EditStructure, reach: reaches(structure)}
+
+def ChangeStructure.structure(c: ChangeStructure) -> EditStructure:
+  match c:
+    case ChangeStructure{s, r}:
+      s
 
 # Changes to any value: a Change is a run of a type's edits, after an
 # optional new value to start from. Changes make a change structure
@@ -89,10 +98,14 @@ def apply(~ce: EditStructure, d: Change.of(ce), a: Value(ce)) -> Value(ce):
     case Change{s, es}:
       run(~ce, es, start(Value(ce), s, a))
 
-# Completes ce into a change structure: its edits are Changes of ce's
-# edits, which C.apply applies.
-def complete(~ce: EditStructure) -> EditStructure:
+# The edit structure of ce's Changes, which C.apply applies.
+def changes(~ce: EditStructure) -> EditStructure:
   EditStructure{Value(ce), Change.of(ce), d => a => apply(~ce, d, a)}
+
+# Completes ce into a change structure: ce's Changes, which get from any
+# value to any other by replacing.
+def complete(~ce: EditStructure) -> ChangeStructure:
+  ChangeStructure{changes(~ce), a => b => (replace(ce, b), {==})}
 
 # An incremental function, from values that change as ca says to values
 # that change as cb says: a function f, and its derivative df, which gives
@@ -117,17 +130,17 @@ def Inc.ok(-ca: EditStructure, -cb: EditStructure, g: Inc<ca, cb>) -> Type:
 
 # The derivative lift builds from g's, for a run of edits from the value
 # before them: each edit's change from g, one after another.
-def lift.run(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, complete(~cb)>, es: List<&2, Edit(ca)>,
+def lift.run(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>, es: List<&2, Edit(ca)>,
   +a: Value(ca)) -> Change.of(cb):
   match es:
     case Nil{}:
       keep(cb)
     case Con{+e, t}:
-      then(cb, Inc.df(ca, complete(~cb), g)(a, e), lift.run(~ca, ~cb, ~g, t, EditStructure.apply(ca)(e, a)))
+      then(cb, Inc.df(ca, changes(~cb), g)(a, e), lift.run(~ca, ~cb, ~g, t, EditStructure.apply(ca)(e, a)))
 
 # lift's derivative: a new start replaces the result with f of the new
 # value, and the edits follow from whichever value they start from.
-def lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, complete(~cb)>, d: Change.of(ca), +a: Value(ca)) ->
+def lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>, d: Change.of(ca), +a: Value(ca)) ->
   Change.of(cb):
   match d:
     case Change{s, es}:
@@ -135,16 +148,16 @@ def lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, complete(~cb)>, 
         case None{}:
           lift.run(~ca, ~cb, ~g, es, a)
         case Some{+x}:
-          then(cb, replace(cb, Inc.f(ca, complete(~cb), g)(x)), lift.run(~ca, ~cb, ~g, es, x))
+          then(cb, replace(cb, Inc.f(ca, changes(~cb), g)(x)), lift.run(~ca, ~cb, ~g, es, x))
 
 # Lifts g, whose derivative handles one edit as ca says, to an Inc whose
 # derivative handles any change.
-def lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, complete(~cb)>) -> Inc<complete(~ca), complete(~cb)>:
-  Inc{Inc.f(ca, complete(~cb), g), a => d => lift.df(~ca, ~cb, ~g, d, a)}
+def lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>) -> Inc<changes(~ca), changes(~cb)>:
+  Inc{Inc.f(ca, changes(~cb), g), a => d => lift.df(~ca, ~cb, ~g, d, a)}
 
 # f, with the derivative that recomputes: whatever the change, replace the
 # result.
-def recompute(~ca: EditStructure, ~cb: EditStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, complete(~cb)>:
+def recompute(~ca: EditStructure, ~cb: EditStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, changes(~cb)>:
   Inc{f, a => d => replace(cb, f(EditStructure.apply(ca)(d, a)))}
 
 # A change's new value mapped by fa, if it has one.

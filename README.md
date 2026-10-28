@@ -36,18 +36,18 @@ input's change instead of recomputing it):
 
 - `change/`: changes to any value. An edit structure (`EditStructure`) says
   how a type's values are edited: the type of the values (`Value`), the type
-  of their edits (`Edit`), and how to apply one. It is a change structure
-  (`ChangeStructure`) when one edit gets from any value to any other, which
-  a list's single edits don't. `complete` makes any edit structure into a
-  change structure whose edits are `Change`s: an optional new value to start
-  over from, then a run of edits. That adds no change (`keep`), starting
-  over (`replace`), and one change then another (`then`). An `Inc<ca, cb>`
-  pairs a function, from values edited as `ca` says to values edited as `cb`
-  says, with its derivative, which gives the change to the function's result
-  from a change to its input. `lift` turns an `Inc` whose derivative handles
-  single edits into one that handles any change. The laws say what applying
-  each change returns, that a completed edit structure is a change
-  structure, what `lift`'s derivative returns for each kind of change, and
+  of their edits (`Edit`), and how to apply one. A change structure
+  (`ChangeStructure`) is an edit structure with the proof that one edit gets
+  from any value to any other, which a list's single edits can't give.
+  `complete` makes a change structure from any edit structure: its edits are
+  `Change`s (`changes`), an optional new value to start over from, then a
+  run of edits. That adds no change (`keep`), starting over (`replace`), and
+  one change then another (`then`). An `Inc<ca, cb>` pairs a function, from
+  values edited as `ca` says to values edited as `cb` says, with its
+  derivative, which gives the change to the function's result from a change
+  to its input. `lift` turns an `Inc` whose derivative handles single edits
+  into one that handles any change. The laws say what applying each change
+  returns, what `lift`'s derivative returns for each kind of change, and
   that lifting a correct `Inc` gives a correct one.
 - `list/`: a list's edits (insert, delete, and update an element in place),
   given how its elements are edited (`edit_structure`, which `C.complete`

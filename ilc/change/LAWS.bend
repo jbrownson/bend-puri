@@ -6,9 +6,9 @@ import ./change.bend as C
 # How values are edited
 # ---------------------
 # An edit structure says how values are edited: values of type Value, by
-# edits of type Edit, which `apply` applies. It is a change structure when
-# one edit gets from any value to any other; C.complete makes any edit
-# structure into one.
+# edits of type Edit, which `apply` applies. A change structure is an edit
+# structure with the proof that one edit gets from any value to any other;
+# C.complete makes one from any edit structure.
 
 # LAW: Value is the type of the values.
 law value:
@@ -31,17 +31,24 @@ law structure_apply:
   for ~f: D -> V -> V
   {C.EditStructure.apply(C.EditStructure{V, D, f}) == f : D -> V -> V}
 
-# LAW: an edit structure is a change structure when one edit gets from
-# any value to any other.
-law change_structure:
+# LAW: an edit structure reaches when one edit gets from any value to any
+# other.
+law reaches:
   for -ce: C.EditStructure
-  {C.ChangeStructure(ce) == (@a: C.Value(ce) -> @b: C.Value(ce) -> &d: C.Edit(ce) -> {C.EditStructure.apply(ce)(d, a) == b : C.Value(ce)}) : Type}
+  {C.reaches(ce) == (@a: C.Value(ce) -> @b: C.Value(ce) -> &d: C.Edit(ce) -> {C.EditStructure.apply(ce)(d, a) == b : C.Value(ce)}) : Type}
+
+# LAW: a change structure's edit structure is the one it was made from.
+law change_structure:
+  for ~s: C.EditStructure
+  for r: C.reaches(s)
+  {C.ChangeStructure.structure(C.ChangeStructure{s, r}) == s : C.EditStructure}
 
 # Changes to any value
 # --------------------
 # A type supplies its edits, ce. A Change of ce's edits, C.Change.of(ce),
-# is a run of edits after an optional new value to start from, and
-# C.complete(ce) is the change structure they make.
+# is a run of edits after an optional new value to start from.
+# C.changes(ce) is the edit structure they make, and C.complete(ce) the
+# change structure.
 
 # LAW: a Change of ce's edits is a Change of its values and edits.
 law change_of:
@@ -104,9 +111,14 @@ law then_edits:
   {C.then(ce, C.Change{s, ps}, C.Change{None{}, qs}) == C.Change{s, List.append(&2, C.Edit(ce), ps, qs)} : C.Change.of(ce)}
 
 # LAW: Changes of ce's edits change ce's values by C.apply.
+law changes:
+  for ~ce: C.EditStructure
+  {C.changes(~ce) == C.EditStructure{C.Value(ce), C.Change.of(ce), d => a => C.apply(~ce, d, a)} : C.EditStructure}
+
+# LAW: completing ce gives the change structure of its Changes.
 law complete:
   for ~ce: C.EditStructure
-  {C.complete(~ce) == C.EditStructure{C.Value(ce), C.Change.of(ce), d => a => C.apply(~ce, d, a)} : C.EditStructure}
+  {C.ChangeStructure.structure(C.complete(~ce)) == C.changes(~ce) : C.EditStructure}
 
 # LAW: values that change only as a whole have no edits of their own.
 law whole:
@@ -127,12 +139,6 @@ law apply_replace:
   for x: C.Value(ce)
   for a: C.Value(ce)
   {C.apply(~ce, C.replace(ce, x), a) == x : C.Value(ce)}
-
-# LAW: a completed edit structure is a change structure: from any value,
-# replacing gets to any other.
-law complete_change_structure:
-  for ~ce: C.EditStructure
-  C.ChangeStructure(C.complete(~ce))
 
 # LAW: an edit is applied as ce says.
 law apply_edit:
@@ -255,14 +261,14 @@ law inc_ok:
 law lift:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
-  {C.lift(~ca, ~cb, ~g) == C.Inc{C.Inc.f(ca, C.complete(~cb), g), a => d => C.lift.df(~ca, ~cb, ~g, d, a)} : C.Inc<C.complete(~ca), C.complete(~cb)>}
+  for ~g: C.Inc<ca, C.changes(~cb)>
+  {C.lift(~ca, ~cb, ~g) == C.Inc{C.Inc.f(ca, C.changes(~cb), g), a => d => C.lift.df(~ca, ~cb, ~g, d, a)} : C.Inc<C.changes(~ca), C.changes(~cb)>}
 
 # LAW: keeping the input keeps the result.
 law lift_keep:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
+  for ~g: C.Inc<ca, C.changes(~cb)>
   for a: C.Value(ca)
   {C.lift.df(~ca, ~cb, ~g, C.keep(ca), a) == C.keep(cb) : C.Change.of(cb)}
 
@@ -270,25 +276,25 @@ law lift_keep:
 law lift_replace:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
+  for ~g: C.Inc<ca, C.changes(~cb)>
   for x: C.Value(ca)
   for a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.replace(ca, x), a) == C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)) : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.replace(ca, x), a) == C.replace(cb, C.Inc.f(ca, C.changes(~cb), g)(x)) : C.Change.of(cb)}
 
 # LAW: one edit gives g's change.
 law lift_edit:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
+  for ~g: C.Inc<ca, C.changes(~cb)>
   for e: C.Edit(ca)
   for a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.edit(ca, e), a) == C.Inc.df(ca, C.complete(~cb), g)(a, e) : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.edit(ca, e), a) == C.Inc.df(ca, C.changes(~cb), g)(a, e) : C.Change.of(cb)}
 
 # LAW: p then q lifts q from the value p produced.
 law lift_then:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
+  for ~g: C.Inc<ca, C.changes(~cb)>
   for p: C.Change.of(ca)
   for q: C.Change.of(ca)
   for +a: C.Value(ca)
@@ -301,9 +307,9 @@ law lift_then:
 law lift_ok:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
-  for ~g: C.Inc<ca, C.complete(~cb)>
-  for ~g_ok: C.Inc.ok(ca, C.complete(~cb), g)
-  C.Inc.ok(C.complete(~ca), C.complete(~cb), C.lift(~ca, ~cb, ~g))
+  for ~g: C.Inc<ca, C.changes(~cb)>
+  for ~g_ok: C.Inc.ok(ca, C.changes(~cb), g)
+  C.Inc.ok(C.changes(~ca), C.changes(~cb), C.lift(~ca, ~cb, ~g))
 
 # Recomputing
 # -----------
@@ -314,7 +320,7 @@ law recompute:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
   for ~f: C.Value(ca) -> C.Value(cb)
-  {C.recompute(~ca, ~cb, ~f) == C.Inc{f, a => d => C.replace(cb, f(C.EditStructure.apply(ca)(d, a)))} : C.Inc<ca, C.complete(~cb)>}
+  {C.recompute(~ca, ~cb, ~f) == C.Inc{f, a => d => C.replace(cb, f(C.EditStructure.apply(ca)(d, a)))} : C.Inc<ca, C.changes(~cb)>}
 
 # It follows that:
 
@@ -323,4 +329,4 @@ law recompute_ok:
   for ~ca: C.EditStructure
   for ~cb: C.EditStructure
   for ~f: C.Value(ca) -> C.Value(cb)
-  C.Inc.ok(ca, C.complete(~cb), C.recompute(~ca, ~cb, ~f))
+  C.Inc.ok(ca, C.changes(~cb), C.recompute(~ca, ~cb, ~f))

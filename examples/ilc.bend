@@ -22,12 +22,12 @@ def mapped() -> C.Change.of(L.edit_structure(~adds())):
 
 # Lists of lists, mapped twice: inserting 7 at the front of the second
 # inner list inserts 70 there.
-def nested() -> C.Change.of(L.edit_structure(~C.complete(~L.edit_structure(~adds())))):
-  L.dmap(~C.complete(~L.edit_structure(~adds())), ~C.complete(~L.edit_structure(~adds())), ~L.map.inc(~adds(), ~adds(), ~times10()),
+def nested() -> C.Change.of(L.edit_structure(~C.changes(~L.edit_structure(~adds())))):
+  L.dmap(~C.changes(~L.edit_structure(~adds())), ~C.changes(~L.edit_structure(~adds())), ~L.map.inc(~adds(), ~adds(), ~times10()),
     C.Change{None{}, [L.Update{1n, C.Change{None{}, [L.Insert{0n, 7}]}}]}, [[1, 2], [3]])
 
 # The mapped change; [10, 20, 30] patched by it; [1, 2, 3] patched and
 # then mapped from scratch, which agrees; and the nested change.
-def main() -> C.Change.of(L.edit_structure(~adds())) & (List<&2, U32> & (List<&2, U32> & C.Change.of(L.edit_structure(~C.complete(~L.edit_structure(~adds())))))):
+def main() -> C.Change.of(L.edit_structure(~adds())) & (List<&2, U32> & (List<&2, U32> & C.Change.of(L.edit_structure(~C.changes(~L.edit_structure(~adds())))))):
   (mapped(), (L.patch(~adds(), mapped(), [10, 20, 30]),
     (L.map(~U32, ~U32, ~C.Inc.f(adds(), adds(), times10()), L.patch(~adds(), change(), [1, 2, 3])), nested())))

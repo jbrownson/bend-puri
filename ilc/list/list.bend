@@ -105,7 +105,7 @@ def dmap(~ca: C.EditStructure, ~cb: C.EditStructure, ~g: C.Inc<ca, cb>, d: C.Cha
 
 # map, as an incremental function: g's function mapped over a list, with
 # dmap as its derivative.
-def map.inc(~ca: C.EditStructure, ~cb: C.EditStructure, ~g: C.Inc<ca, cb>) -> C.Inc<C.complete(~edit_structure(~ca)), C.complete(~edit_structure(~cb))>:
+def map.inc(~ca: C.EditStructure, ~cb: C.EditStructure, ~g: C.Inc<ca, cb>) -> C.Inc<C.changes(~edit_structure(~ca)), C.changes(~edit_structure(~cb))>:
   C.Inc{xs => map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => dmap(~ca, ~cb, ~g, d, xs)}
 
 # An edit with its element mapped by fa and its element change by fd.
