@@ -32,7 +32,7 @@ def gap(-A: Data, xs: List<&2, A>, i: Nat) -> Data:
     case Con{h, t} 1n+p:
       gap(A, t, p)
 
-def valid.edit(~ca: C.ChangeStructure, e: L.Edit.of(ca), +xs: List<&2, C.Value(ca)>) -> Data:
+def valid.edit(~ca: C.Edits, e: L.Edit.of(ca), +xs: List<&2, C.Value(ca)>) -> Data:
   match e:
     case L.Insert{i, x}:
       gap(C.Value(ca), xs, i)
@@ -41,48 +41,56 @@ def valid.edit(~ca: C.ChangeStructure, e: L.Edit.of(ca), +xs: List<&2, C.Value(c
     case L.Update{i, u}:
       has(C.Value(ca), xs, i)
 
-def valid.edits(~ca: C.ChangeStructure, es: List<&2, L.Edit.of(ca)>, +xs: List<&2, C.Value(ca)>) -> Type:
+def valid.edits(~ca: C.Edits, es: List<&2, L.Edit.of(ca)>, +xs: List<&2, C.Value(ca)>) -> Type:
   match es:
     case Nil{}:
       Unit
     case Con{+e, t}:
       valid.edit(~ca, e, xs) & valid.edits(~ca, t, L.edit(~ca, e, xs))
 
-def valid(~ca: C.ChangeStructure, d: C.Change.of(L.structure(~ca)), +xs: List<&2, C.Value(ca)>) -> Type:
+def valid(~ca: C.Edits, d: C.Change.of(L.edits(~ca)), +xs: List<&2, C.Value(ca)>) -> Type:
   match d:
     case C.Change{s, es}:
       valid.edits(~ca, es, C.start(List<&2, C.Value(ca)>, s, xs))
 
 # Edits
 # -----
-# A list's elements change as ca says: a value that only changes whole by
-# C.complete(~C.whole(~A)), a list by
-# C.complete(~L.structure(~cb)). L.structure(ca) says how a list changes
-# by one edit, L.Edit.of(ca); its completion adds keeping, replacing and
-# one change then another. List.take(xs, i) is the first i elements,
-# List.drop(xs, i) the rest, and List.get(xs, i) the element at i, or None
-# past the end.
+# A list's elements are edited as ca says: a value that only changes
+# whole by C.complete(~C.whole(~A)), a list by C.complete(~L.edits(~cb)).
+# L.edits(ca) are a list's own edits, one L.Edit.of(ca) at a time; they
+# aren't a change structure, and their completion is, adding keeping,
+# replacing and one change then another. List.take(xs, i) is the first i
+# elements, List.drop(xs, i) the rest, and List.get(xs, i) the element at
+# i, or None past the end.
 
-# LAW: a list's edits are made of its elements' values and changes.
+# LAW: a list's edits are made of its elements' values and edits.
 law edit_of:
-  for -ca: C.ChangeStructure
-  {L.Edit.of(ca) == L.Edit<C.Value(ca), C.Delta(ca)> : Data}
+  for -ca: C.Edits
+  {L.Edit.of(ca) == L.Edit<C.Value(ca), C.Edit(ca)> : Data}
 
 # LAW: a list changes by one edit as L.edit says.
-law structure:
-  for ~ca: C.ChangeStructure
-  {L.structure(~ca) == C.ChangeStructure{List<&2, C.Value(ca)>, L.Edit.of(ca), e => xs => L.edit(~ca, e, xs)} : C.ChangeStructure}
+law edits:
+  for ~ca: C.Edits
+  {L.edits(~ca) == C.Edits{List<&2, C.Value(ca)>, L.Edit.of(ca), e => xs => L.edit(~ca, e, xs)} : C.Edits}
+
+# LAW: a list's own edits are not a change structure, if it has elements
+# at all: no one edit gets from the empty list to a list of two.
+law edits_not_change_structure:
+  for ~ca: C.Edits
+  for +x: C.Value(ca)
+  for h: C.ChangeStructure(L.edits(~ca))
+  Empty
 
 # LAW: patching applies a list change, edit by edit.
 law patch:
-  for ~ca: C.ChangeStructure
-  for d: C.Change.of(L.structure(~ca))
+  for ~ca: C.Edits
+  for d: C.Change.of(L.edits(~ca))
   for xs: List<&2, C.Value(ca)>
-  {L.patch(~ca, d, xs) == C.apply(~L.structure(~ca), d, xs) : List<&2, C.Value(ca)>}
+  {L.patch(~ca, d, xs) == C.apply(~L.edits(~ca), d, xs) : List<&2, C.Value(ca)>}
 
 # LAW: inserting at i puts x before the element at i, or at the end.
 law edit_insert:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for xs: List<&2, C.Value(ca)>
   for i: Nat
   for x: C.Value(ca)
@@ -91,7 +99,7 @@ law edit_insert:
 
 # LAW: deleting at i removes the element at i.
 law edit_delete:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for xs: List<&2, C.Value(ca)>
   for i: Nat
   for v: has(C.Value(ca), xs, i)
@@ -99,13 +107,13 @@ law edit_delete:
 
 # LAW: updating the element at i applies the change to it, in place.
 law edit_update_inside:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for x: C.Value(ca)
   for at: {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
-  {L.edit(~ca, L.Update{i, d}, xs) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), C.ChangeStructure.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
+  {L.edit(~ca, L.Update{i, d}, xs) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), C.Edits.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
 
 # LAW: mapping an insert maps the inserted element.
 law edit_map_insert:
@@ -146,9 +154,9 @@ law edit_map_update:
 # Unit{}: what remains is whether it starts over, and each edit's kind
 # and position.
 law shape:
-  for ~ca: C.ChangeStructure
-  for d: C.Change.of(L.structure(~ca))
-  {L.shape(~ca, d) == C.map(~List<&2, C.Value(ca)>, ~L.Edit.of(ca), ~Unit, ~L.Edit<Unit, Unit>, ~(xs => Unit{}), ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d) : C.Change<Unit, L.Edit<Unit, Unit>>}
+  for ~ca: C.Edits
+  for d: C.Change.of(L.edits(~ca))
+  {L.shape(~ca, d) == C.map(~List<&2, C.Value(ca)>, ~L.Edit.of(ca), ~Unit, ~L.Edit<Unit, Unit>, ~(xs => Unit{}), ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), d) : C.Change<Unit, L.Edit<Unit, Unit>>}
 
 # Mapping
 # -------
@@ -179,88 +187,88 @@ law map_con:
 
 # LAW: map.inc(g) maps g's function, with dmap for its derivative.
 law map_inc:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
-  {L.map.inc(~ca, ~cb, ~g) == C.Inc{xs => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => L.dmap(~ca, ~cb, ~g, d, xs)} : C.Inc<C.complete(~L.structure(~ca)), C.complete(~L.structure(~cb))>}
+  {L.map.inc(~ca, ~cb, ~g) == C.Inc{xs => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), xs => d => L.dmap(~ca, ~cb, ~g, d, xs)} : C.Inc<C.complete(~L.edits(~ca)), C.complete(~L.edits(~cb))>}
 
 # LAW: keeping the list keeps the mapped list.
 law dmap_keep:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for xs: List<&2, C.Value(ca)>
-  {L.dmap(~ca, ~cb, ~g, C.keep(L.structure(~ca)), xs) == C.keep(L.structure(~cb)) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.keep(L.edits(~ca)), xs) == C.keep(L.edits(~cb)) : C.Change.of(L.edits(~cb))}
 
 # LAW: replacing the list replaces the mapped list, with the new list
 # mapped.
 law dmap_replace:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ys: List<&2, C.Value(ca)>
   for xs: List<&2, C.Value(ca)>
-  {L.dmap(~ca, ~cb, ~g, C.replace(L.structure(~ca), ys), xs) == C.replace(L.structure(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.replace(L.edits(~ca), ys), xs) == C.replace(L.edits(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)) : C.Change.of(L.edits(~cb))}
 
 # LAW: inserting x inserts its image at the same position.
 law dmap_insert:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for i: Nat
   for x: C.Value(ca)
   for xs: List<&2, C.Value(ca)>
-  {L.dmap(~ca, ~cb, ~g, C.edit(L.structure(~ca), L.Insert{i, x}), xs) == C.edit(L.structure(~cb), L.Insert{i, C.Inc.f(ca, cb, g)(x)}) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.edit(L.edits(~ca), L.Insert{i, x}), xs) == C.edit(L.edits(~cb), L.Insert{i, C.Inc.f(ca, cb, g)(x)}) : C.Change.of(L.edits(~cb))}
 
 # LAW: deleting deletes at the same position.
 law dmap_delete:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for i: Nat
   for xs: List<&2, C.Value(ca)>
-  {L.dmap(~ca, ~cb, ~g, C.edit(L.structure(~ca), L.Delete{i}), xs) == C.edit(L.structure(~cb), L.Delete{i}) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.edit(L.edits(~ca), L.Delete{i}), xs) == C.edit(L.edits(~cb), L.Delete{i}) : C.Change.of(L.edits(~cb))}
 
 # LAW: updating the element x at i updates its image at i, by g's
 # derivative.
 law dmap_update_inside:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for x: C.Value(ca)
   for at: {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
-  {L.dmap(~ca, ~cb, ~g, C.edit(L.structure(~ca), L.Update{i, d}), xs) == C.edit(L.structure(~cb), L.Update{i, C.Inc.df(ca, cb, g)(x, d)}) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.edit(L.edits(~ca), L.Update{i, d}), xs) == C.edit(L.edits(~cb), L.Update{i, C.Inc.df(ca, cb, g)(x, d)}) : C.Change.of(L.edits(~cb))}
 
 # LAW: one change then another maps the second from the list the first
 # produced.
 law dmap_then:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
-  for p: C.Change.of(L.structure(~ca))
-  for q: C.Change.of(L.structure(~ca))
+  for p: C.Change.of(L.edits(~ca))
+  for q: C.Change.of(L.edits(~ca))
   for +xs: List<&2, C.Value(ca)>
-  {L.dmap(~ca, ~cb, ~g, C.then(L.structure(~ca), p, q), xs) == C.then(L.structure(~cb), L.dmap(~ca, ~cb, ~g, p, xs), L.dmap(~ca, ~cb, ~g, q, L.patch(~ca, p, xs))) : C.Change.of(L.structure(~cb))}
+  {L.dmap(~ca, ~cb, ~g, C.then(L.edits(~ca), p, q), xs) == C.then(L.edits(~cb), L.dmap(~ca, ~cb, ~g, p, xs), L.dmap(~ca, ~cb, ~g, q, L.patch(~ca, p, xs))) : C.Change.of(L.edits(~cb))}
 
 # It follows that:
 
 # LAW: map.inc(g) is correct, if g is.
 law map_inc_ok:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
-  C.Inc.ok(C.complete(~L.structure(~ca)), C.complete(~L.structure(~cb)), L.map.inc(~ca, ~cb, ~g))
+  C.Inc.ok(C.complete(~L.edits(~ca)), C.complete(~L.edits(~cb)), L.map.inc(~ca, ~cb, ~g))
 
 # LAW: dmap is local: it acts exactly where a valid change acts.
 law dmap_local:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
-  for d: C.Change.of(L.structure(~ca))
+  for d: C.Change.of(L.edits(~ca))
   for +xs: List<&2, C.Value(ca)>
   for v: valid(~ca, d, xs)
   {L.shape(~cb, L.dmap(~ca, ~cb, ~g, d, xs)) == L.shape(~ca, d) : C.Change<Unit, L.Edit<Unit, Unit>>}
@@ -268,11 +276,11 @@ law dmap_local:
 # LAW: dmap keeps changes valid, if g is correct: a valid change gives one
 # valid for the mapped list.
 law dmap_valid:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
-  for d: C.Change.of(L.structure(~ca))
+  for d: C.Change.of(L.edits(~ca))
   for +xs: List<&2, C.Value(ca)>
   for v: valid(~ca, d, xs)
   valid(~cb, L.dmap(~ca, ~cb, ~g, d, xs), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))

@@ -45,8 +45,50 @@ def drop_zero(A, t):
 def Laws.edit_of(ca):
   {==}
 
-def Laws.structure(ca):
+def Laws.edits(ca):
   {==}
+
+def at_most_one(-A: Data, xs: List<&2, A>) -> Type:
+  match xs:
+    case Nil{}:
+      Unit
+    case Con{h, t}:
+      match t:
+        case Nil{}:
+          Unit
+        case Con{h2, t2}:
+          Empty
+
+# Lemma: one edit of the empty list leaves at most one element.
+law edit_nil:
+  for ~ca: C.Edits
+  for e: L.Edit.of(ca)
+  at_most_one(C.Value(ca), L.edit(~ca, e, Nil{}))
+
+def edit_nil(ca, e):
+  match e:
+    case L.Insert{i, x}:
+      Unit{}
+    case L.Delete{i}:
+      Unit{}
+    case L.Update{i, d}:
+      Unit{}
+
+# Lemma: no one edit gets from the empty list to [x, x].
+law edit_nil_two:
+  for ~ca: C.Edits
+  for -x: C.Value(ca)
+  for r: &e: L.Edit.of(ca) -> {L.edit(~ca, e, Nil{}) == [x, x] : List<&2, C.Value(ca)>}
+  Empty
+
+def edit_nil_two(ca, x, r):
+  match r:
+    case (e, at):
+      %at : at_most_one(C.Value(ca), _)
+      edit_nil(~ca, e)
+
+def Laws.edits_not_change_structure(ca, x, h):
+  edit_nil_two(~ca, x, h(Nil{}, [x, x]))
 
 def Laws.patch(ca, d, xs):
   {==}
@@ -94,25 +136,25 @@ def Laws.edit_delete(ca, xs, i, v):
 
 # Lemma: update at a position holding x puts the changed x in its place.
 law update_inside:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for xs: List<&2, C.Value(ca)>
   for i: Nat
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for x: C.Value(ca)
   for at: {List.get(&2, C.Value(ca), xs, i) == Some{x} : Maybe<&2, C.Value(ca)>}
-  {L.update(~ca, xs, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), C.ChangeStructure.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
+  {L.update(~ca, xs, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), C.Edits.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
 
 def update_inside(ca, xs, i, d, x, at):
   match xs i:
     case Nil{} _:
-      Empty.absurd({L.update(~ca, Nil{}, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), Nil{}, i), C.ChangeStructure.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), Nil{}, 1n+i)) : List<&2, C.Value(ca)>},
+      Empty.absurd({L.update(~ca, Nil{}, i, d) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), Nil{}, i), C.Edits.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), Nil{}, 1n+i)) : List<&2, C.Value(ca)>},
         some_none(C.Value(ca), x, Equal.sym(Maybe<&2, C.Value(ca)>, None{}, Some{x}, at)))
     case Con{h, t} 0n:
-      %Equal.cong(Maybe<&2, C.Value(ca)>, C.Value(ca), m => Maybe.default(&2, C.Value(ca), m, h), Some{h}, Some{x}, at) : {C.ChangeStructure.apply(ca)(d, h) <> t == C.ChangeStructure.apply(ca)(d, _) <> List.drop(&2, C.Value(ca), t, 0n) : List<&2, C.Value(ca)>}
-      %Equal.sym(List<&2, C.Value(ca)>, List.drop(&2, C.Value(ca), t, 0n), t, drop_zero(C.Value(ca), t)) : {C.ChangeStructure.apply(ca)(d, h) <> t == C.ChangeStructure.apply(ca)(d, h) <> _ : List<&2, C.Value(ca)>}
+      %Equal.cong(Maybe<&2, C.Value(ca)>, C.Value(ca), m => Maybe.default(&2, C.Value(ca), m, h), Some{h}, Some{x}, at) : {C.Edits.apply(ca)(d, h) <> t == C.Edits.apply(ca)(d, _) <> List.drop(&2, C.Value(ca), t, 0n) : List<&2, C.Value(ca)>}
+      %Equal.sym(List<&2, C.Value(ca)>, List.drop(&2, C.Value(ca), t, 0n), t, drop_zero(C.Value(ca), t)) : {C.Edits.apply(ca)(d, h) <> t == C.Edits.apply(ca)(d, h) <> _ : List<&2, C.Value(ca)>}
       {==}
     case Con{h, t} 1n+p:
-      %Equal.sym(List<&2, C.Value(ca)>, L.update(~ca, t, p, d), List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.ChangeStructure.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)), update_inside(~ca, t, p, d, x, at)) : {h <> _ == h <> List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.ChangeStructure.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)) : List<&2, C.Value(ca)>}
+      %Equal.sym(List<&2, C.Value(ca)>, L.update(~ca, t, p, d), List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.Edits.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)), update_inside(~ca, t, p, d, x, at)) : {h <> _ == h <> List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), t, p), C.Edits.apply(ca)(d, x) <> List.drop(&2, C.Value(ca), t, 1n+p)) : List<&2, C.Value(ca)>}
       {==}
 
 def Laws.edit_update_inside(ca, xs, i, d, x, at):
@@ -199,12 +241,12 @@ def gap_map(A, B, f, xs, i, v):
 # Lemma: edits valid for a list, then edits valid for the list they
 # produce, are valid together.
 law valid_append:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for es: List<&2, L.Edit.of(ca)>
   for fs: List<&2, L.Edit.of(ca)>
   for +xs: List<&2, C.Value(ca)>
   for v: Laws.valid.edits(~ca, es, xs)
-  for w: Laws.valid.edits(~ca, fs, C.run(~L.structure(~ca), es, xs))
+  for w: Laws.valid.edits(~ca, fs, C.run(~L.edits(~ca), es, xs))
   Laws.valid.edits(~ca, List.append(&2, L.Edit.of(ca), es, fs), xs)
 
 def valid_append(ca, es, fs, xs, v, w):
@@ -217,7 +259,7 @@ def valid_append(ca, es, fs, xs, v, w):
 
 # Lemma: edits valid for a list are valid for an equal one.
 law valid_eq:
-  for ~ca: C.ChangeStructure
+  for ~ca: C.Edits
   for es: List<&2, L.Edit.of(ca)>
   for xs: List<&2, C.Value(ca)>
   for ys: List<&2, C.Value(ca)>
@@ -273,12 +315,12 @@ def map_remove(A, B, f, xs, i):
 
 # Lemma: an update one further along a longer list passes over its head.
 law at_shift:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for p: Nat
   for m: Maybe<&2, C.Value(ca)>
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for y: C.Value(cb)
   for ys: List<&2, C.Value(cb)>
   {L.patch(~cb, L.map.at(~ca, ~cb, ~g, 1n+p, m, d), y <> ys) == y <> L.patch(~cb, L.map.at(~ca, ~cb, ~g, p, m, d), ys) : List<&2, C.Value(cb)>}
@@ -293,13 +335,13 @@ def at_shift(ca, cb, g, p, m, d, y, ys):
 # Lemma: mapping after an update updates the mapped element by g's
 # derivative, if g is correct.
 law map_update:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
   for +xs: List<&2, C.Value(ca)>
   for +i: Nat
-  for +d: C.Delta(ca)
+  for +d: C.Edit(ca)
   {L.patch(~cb, L.map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), d), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, xs, i, d)) : List<&2, C.Value(cb)>}
 
 def map_update(ca, cb, g, g_ok, xs, i, d):
@@ -307,7 +349,7 @@ def map_update(ca, cb, g, g_ok, xs, i, d):
     case Nil{} _:
       {==}
     case Con{h, t} 0n:
-      %Equal.sym(C.Value(cb), C.ChangeStructure.apply(cb)(C.Inc.df(ca, cb, g)(h, d), C.Inc.f(ca, cb, g)(h)), C.Inc.f(ca, cb, g)(C.ChangeStructure.apply(ca)(d, h)), g_ok(h, d)) : {_ <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) == C.Inc.f(ca, cb, g)(C.ChangeStructure.apply(ca)(d, h)) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) : List<&2, C.Value(cb)>}
+      %Equal.sym(C.Value(cb), C.Edits.apply(cb)(C.Inc.df(ca, cb, g)(h, d), C.Inc.f(ca, cb, g)(h)), C.Inc.f(ca, cb, g)(C.Edits.apply(ca)(d, h)), g_ok(h, d)) : {_ <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) == C.Inc.f(ca, cb, g)(C.Edits.apply(ca)(d, h)) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t) : List<&2, C.Value(cb)>}
       {==}
     case Con{h, t} 1n+p:
       %Equal.sym(List<&2, C.Value(cb)>, L.patch(~cb, L.map.at(~ca, ~cb, ~g, 1n+p, List.get(&2, C.Value(ca), t, p), d), C.Inc.f(ca, cb, g)(h) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t)), C.Inc.f(ca, cb, g)(h) <> L.patch(~cb, L.map.at(~ca, ~cb, ~g, p, List.get(&2, C.Value(ca), t, p), d), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t)), at_shift(~ca, ~cb, ~g, p, List.get(&2, C.Value(ca), t, p), d, C.Inc.f(ca, cb, g)(h), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), t))) : {_ == C.Inc.f(ca, cb, g)(h) <> L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.update(~ca, t, p, d)) : List<&2, C.Value(cb)>}
@@ -316,8 +358,8 @@ def map_update(ca, cb, g, g_ok, xs, i, d):
 
 # Lemma: map.edit is correct for every single edit, if g is.
 law map_edit_ok:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
   for xs: List<&2, C.Value(ca)>
@@ -339,15 +381,15 @@ def map_edit_ok(ca, cb, g, g_ok, xs, e):
 # produces is a run of edits: out(xs, e) for one edit, which map.edit
 # gives, and out.run(es, xs) for a run.
 
-def out.at(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, i: Nat, m: Maybe<&2, C.Value(ca)>,
-  d: C.Delta(ca)) -> List<&2, L.Edit.of(cb)>:
+def out.at(~ca: C.Edits, ~cb: C.Edits, ~g: C.Inc<ca, cb>, i: Nat, m: Maybe<&2, C.Value(ca)>,
+  d: C.Edit(ca)) -> List<&2, L.Edit.of(cb)>:
   match m:
     case None{}:
       Nil{}
     case Some{x}:
       [L.Update{i, C.Inc.df(ca, cb, g)(x, d)}]
 
-def out(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, xs: List<&2, C.Value(ca)>, e: L.Edit.of(ca)) ->
+def out(~ca: C.Edits, ~cb: C.Edits, ~g: C.Inc<ca, cb>, xs: List<&2, C.Value(ca)>, e: L.Edit.of(ca)) ->
   List<&2, L.Edit.of(cb)>:
   match e:
     case L.Insert{i, x}:
@@ -357,7 +399,7 @@ def out(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, xs: L
     case L.Update{+i, d}:
       out.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), d)
 
-def out.run(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, es: List<&2, L.Edit.of(ca)>, +xs: List<&2, C.Value(ca)>) ->
+def out.run(~ca: C.Edits, ~cb: C.Edits, ~g: C.Inc<ca, cb>, es: List<&2, L.Edit.of(ca)>, +xs: List<&2, C.Value(ca)>) ->
   List<&2, L.Edit.of(cb)>:
   match es:
     case Nil{}:
@@ -367,13 +409,13 @@ def out.run(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, e
 
 # Lemma: an update's change to the mapped list is out.at's edits.
 law at_out:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for i: Nat
   for m: Maybe<&2, C.Value(ca)>
-  for d: C.Delta(ca)
-  {L.map.at(~ca, ~cb, ~g, i, m, d) == C.Change{None{}, out.at(~ca, ~cb, ~g, i, m, d)} : C.Change.of(L.structure(~cb))}
+  for d: C.Edit(ca)
+  {L.map.at(~ca, ~cb, ~g, i, m, d) == C.Change{None{}, out.at(~ca, ~cb, ~g, i, m, d)} : C.Change.of(L.edits(~cb))}
 
 def at_out(ca, cb, g, i, m, d):
   match m:
@@ -384,12 +426,12 @@ def at_out(ca, cb, g, i, m, d):
 
 # Lemma: map.edit's change is out's edits.
 law edit_out:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for xs: List<&2, C.Value(ca)>
   for e: L.Edit.of(ca)
-  {L.map.edit(~ca, ~cb, ~g, xs, e) == C.Change{None{}, out(~ca, ~cb, ~g, xs, e)} : C.Change.of(L.structure(~cb))}
+  {L.map.edit(~ca, ~cb, ~g, xs, e) == C.Change{None{}, out(~ca, ~cb, ~g, xs, e)} : C.Change.of(L.edits(~cb))}
 
 def edit_out(ca, cb, g, xs, e):
   match e:
@@ -402,32 +444,32 @@ def edit_out(ca, cb, g, xs, e):
 
 # Lemma: dmap's change for a run of edits is out.run's edits.
 law lift_run_out:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for es: List<&2, L.Edit.of(ca)>
   for +xs: List<&2, C.Value(ca)>
-  {C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs) == C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)} : C.Change.of(L.structure(~cb))}
+  {C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs) == C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)} : C.Change.of(L.edits(~cb))}
 
 def lift_run_out(ca, cb, g, es, xs):
   match es:
     case Nil{}:
       {==}
     case Con{+e, +t}:
-      %Equal.sym(C.Change.of(L.structure(~cb)), C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, t, L.edit(~ca, e, xs)), C.Change{None{}, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))}, lift_run_out(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))) : {C.then(L.structure(~cb), L.map.edit(~ca, ~cb, ~g, xs, e), _) == C.Change{None{}, List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))} : C.Change.of(L.structure(~cb))}
-      %Equal.sym(C.Change.of(L.structure(~cb)), L.map.edit(~ca, ~cb, ~g, xs, e), C.Change{None{}, out(~ca, ~cb, ~g, xs, e)}, edit_out(~ca, ~cb, ~g, xs, e)) : {C.then(L.structure(~cb), _, C.Change{None{}, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))}) == C.Change{None{}, List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))} : C.Change.of(L.structure(~cb))}
+      %Equal.sym(C.Change.of(L.edits(~cb)), C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, t, L.edit(~ca, e, xs)), C.Change{None{}, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))}, lift_run_out(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))) : {C.then(L.edits(~cb), L.map.edit(~ca, ~cb, ~g, xs, e), _) == C.Change{None{}, List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))} : C.Change.of(L.edits(~cb))}
+      %Equal.sym(C.Change.of(L.edits(~cb)), L.map.edit(~ca, ~cb, ~g, xs, e), C.Change{None{}, out(~ca, ~cb, ~g, xs, e)}, edit_out(~ca, ~cb, ~g, xs, e)) : {C.then(L.edits(~cb), _, C.Change{None{}, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))}) == C.Change{None{}, List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))} : C.Change.of(L.edits(~cb))}
       {==}
 
 # Lemma: out's edits take the mapped list to the edited list, mapped, if
 # g is correct.
 law run_out:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
   for +xs: List<&2, C.Value(ca)>
   for +e: L.Edit.of(ca)
-  {C.run(~L.structure(~cb), out(~ca, ~cb, ~g, xs, e), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)) : List<&2, C.Value(cb)>}
+  {C.run(~L.edits(~cb), out(~ca, ~cb, ~g, xs, e), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)) : List<&2, C.Value(cb)>}
 
 def run_out(ca, cb, g, g_ok, xs, e):
   %edit_out(~ca, ~cb, ~g, xs, e) : {L.patch(~cb, _, L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)) == L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)) : List<&2, C.Value(cb)>}
@@ -453,14 +495,14 @@ def map_edits_append(EA, EB, fe, es, fs):
 # Lemma: an update at a position holding an element maps to an update at
 # the same position.
 law at_shape:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for i: Nat
   for m: Maybe<&2, C.Value(ca)>
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for h: Maybe.holds(C.Value(ca), m)
-  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.at(~ca, ~cb, ~g, i, m, d)) == [L.Update{i, Unit{}}] : List<&2, L.Edit<Unit, Unit>>}
+  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.at(~ca, ~cb, ~g, i, m, d)) == [L.Update{i, Unit{}}] : List<&2, L.Edit<Unit, Unit>>}
 
 def at_shape(ca, cb, g, i, m, d, h):
   match m:
@@ -472,13 +514,13 @@ def at_shape(ca, cb, g, i, m, d, h):
 # Lemma: a valid edit maps to one edit of the same kind at the same
 # position.
 law out_shape:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for +xs: List<&2, C.Value(ca)>
   for e: L.Edit.of(ca)
   for v: Laws.valid.edit(~ca, e, xs)
-  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]) : List<&2, L.Edit<Unit, Unit>>}
+  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]) : List<&2, L.Edit<Unit, Unit>>}
 
 def out_shape(ca, cb, g, xs, e, v):
   match e:
@@ -492,13 +534,13 @@ def out_shape(ca, cb, g, xs, e, v):
 # Lemma: valid edits map to edits of the same kinds at the same
 # positions.
 law shape_run:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for es: List<&2, L.Edit.of(ca)>
   for +xs: List<&2, C.Value(ca)>
   for v: Laws.valid.edits(~ca, es, xs)
-  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, xs)) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es) : List<&2, L.Edit<Unit, Unit>>}
+  {C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, xs)) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es) : List<&2, L.Edit<Unit, Unit>>}
 
 def shape_run(ca, cb, g, es, xs, v):
   match es:
@@ -506,21 +548,21 @@ def shape_run(ca, cb, g, es, xs, v):
       {==}
     case Con{+e, +t}:
       (ve, vt) = v
-      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))), List.append(&2, L.Edit<Unit, Unit>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)), C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))), map_edits_append(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))) : {_ == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
-      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]), out_shape(~ca, ~cb, ~g, xs, e, ve)) : {List.append(&2, L.Edit<Unit, Unit>, _, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
-      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), t), shape_run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs), vt)) : {List.append(&2, L.Edit<Unit, Unit>, C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]), _) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
+      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), List.append(&2, L.Edit.of(cb), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))), List.append(&2, L.Edit<Unit, Unit>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)), C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))), map_edits_append(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))) : {_ == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
+      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out(~ca, ~cb, ~g, xs, e)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]), out_shape(~ca, ~cb, ~g, xs, e, ve)) : {List.append(&2, L.Edit<Unit, Unit>, _, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)))) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
+      %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs))), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), t), shape_run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs), vt)) : {List.append(&2, L.Edit<Unit, Unit>, C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), [e]), _) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), e <> t) : List<&2, L.Edit<Unit, Unit>>}
       {==}
 
 # Lemma: an update at a position holding an element maps to an update
 # valid for a list with that position.
 law at_valid:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ys: List<&2, C.Value(cb)>
   for i: Nat
   for m: Maybe<&2, C.Value(ca)>
-  for d: C.Delta(ca)
+  for d: C.Edit(ca)
   for h: Maybe.holds(C.Value(ca), m)
   for w: Laws.has(C.Value(cb), ys, i)
   Laws.valid.edits(~cb, out.at(~ca, ~cb, ~g, i, m, d), ys)
@@ -534,8 +576,8 @@ def at_valid(ca, cb, g, ys, i, m, d, h, w):
 
 # Lemma: a valid edit maps to edits valid for the mapped list.
 law out_valid:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for +xs: List<&2, C.Value(ca)>
   for e: L.Edit.of(ca)
@@ -555,8 +597,8 @@ def out_valid(ca, cb, g, xs, e, v):
 # correct: each edit's edits are valid for the mapped list as the edits
 # before it left it, which is the list they left, mapped.
 law valid_run:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, cb>
   for ~g_ok: C.Inc.ok(ca, cb, g)
   for es: List<&2, L.Edit.of(ca)>
@@ -571,7 +613,7 @@ def valid_run(ca, cb, g, g_ok, es, xs, v):
     case Con{+e, +t}:
       (ve, vt) = v
       valid_append(~cb, out(~ca, ~cb, ~g, xs, e), out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs), out_valid(~ca, ~cb, ~g, xs, e, ve),
-        valid_eq(~cb, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)), C.run(~L.structure(~cb), out(~ca, ~cb, ~g, xs, e), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)), run_out(~ca, ~cb, ~g, ~g_ok, xs, e),
+        valid_eq(~cb, out.run(~ca, ~cb, ~g, t, L.edit(~ca, e, xs)), C.run(~L.edits(~cb), out(~ca, ~cb, ~g, xs, e), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs)), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), L.edit(~ca, e, xs)), run_out(~ca, ~cb, ~g, ~g_ok, xs, e),
           valid_run(~ca, ~cb, ~g, ~g_ok, t, L.edit(~ca, e, xs), vt)))
 
 # The laws
@@ -593,16 +635,16 @@ def Laws.dmap_delete(ca, cb, g, i, xs):
   {==}
 
 def Laws.dmap_update_inside(ca, cb, g, xs, i, d, x, at):
-  %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {C.then(L.structure(~cb), L.map.at(~ca, ~cb, ~g, i, _, d), C.keep(L.structure(~cb))) == C.edit(L.structure(~cb), L.Update{i, C.Inc.df(ca, cb, g)(x, d)}) : C.Change.of(L.structure(~cb))}
+  %Equal.sym(Maybe<&2, C.Value(ca)>, List.get(&2, C.Value(ca), xs, i), Some{x}, at) : {C.then(L.edits(~cb), L.map.at(~ca, ~cb, ~g, i, _, d), C.keep(L.edits(~cb))) == C.edit(L.edits(~cb), L.Update{i, C.Inc.df(ca, cb, g)(x, d)}) : C.Change.of(L.edits(~cb))}
   {==}
 
 # dmap is lift's derivative, so lift's law gives it.
 def Laws.dmap_then(ca, cb, g, p, q, xs):
-  CL.lift_then(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, p, q, xs)
+  CL.lift_then(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, p, q, xs)
 
 # map.inc(g) is lift applied to map.edit, so lift's law gives it.
 def Laws.map_inc_ok(ca, cb, g, g_ok):
-  CL.lift_ok(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, ~(xs => e => map_edit_ok(~ca, ~cb, ~g, ~g_ok, xs, e)))
+  CL.lift_ok(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, ~(xs => e => map_edit_ok(~ca, ~cb, ~g, ~g_ok, xs, e)))
 
 # dmap's change starts over where the change does, with the new list
 # mapped, and its edits are out.run's.
@@ -611,12 +653,12 @@ def Laws.dmap_local(ca, cb, g, d, xs, v):
     case C.Change{s, +es}:
       match s:
         case None{}:
-          %Equal.sym(C.Change.of(L.structure(~cb)), C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs), C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)}, lift_run_out(~ca, ~cb, ~g, es, xs)) : {L.shape(~cb, _) == L.shape(~ca, C.Change{None{}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
-          %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, xs)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es), shape_run(~ca, ~cb, ~g, es, xs, v)) : {C.Change{None{}, _} == L.shape(~ca, C.Change{None{}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+          %Equal.sym(C.Change.of(L.edits(~cb)), C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs), C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)}, lift_run_out(~ca, ~cb, ~g, es, xs)) : {L.shape(~cb, _) == L.shape(~ca, C.Change{None{}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+          %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, xs)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es), shape_run(~ca, ~cb, ~g, es, xs, v)) : {C.Change{None{}, _} == L.shape(~ca, C.Change{None{}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
           {==}
         case Some{+ys}:
-          %Equal.sym(C.Change.of(L.structure(~cb)), C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, ys), C.Change{None{}, out.run(~ca, ~cb, ~g, es, ys)}, lift_run_out(~ca, ~cb, ~g, es, ys)) : {L.shape(~cb, C.then(L.structure(~cb), C.replace(L.structure(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)), _)) == L.shape(~ca, C.Change{Some{ys}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
-          %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Delta(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, ys)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Delta(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es), shape_run(~ca, ~cb, ~g, es, ys, v)) : {C.Change{Some{Unit{}}, _} == L.shape(~ca, C.Change{Some{ys}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+          %Equal.sym(C.Change.of(L.edits(~cb)), C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, ys), C.Change{None{}, out.run(~ca, ~cb, ~g, es, ys)}, lift_run_out(~ca, ~cb, ~g, es, ys)) : {L.shape(~cb, C.then(L.edits(~cb), C.replace(L.edits(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)), _)) == L.shape(~ca, C.Change{Some{ys}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
+          %Equal.sym(List<&2, L.Edit<Unit, Unit>>, C.map.edits(~L.Edit.of(cb), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(cb), ~C.Edit(cb), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), out.run(~ca, ~cb, ~g, es, ys)), C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es), shape_run(~ca, ~cb, ~g, es, ys, v)) : {C.Change{Some{Unit{}}, _} == L.shape(~ca, C.Change{Some{ys}, es}) : C.Change<Unit, L.Edit<Unit, Unit>>}
           {==}
 
 def Laws.dmap_valid(ca, cb, g, g_ok, d, xs, v):
@@ -624,8 +666,8 @@ def Laws.dmap_valid(ca, cb, g, g_ok, d, xs, v):
     case C.Change{s, +es}:
       match s:
         case None{}:
-          %Equal.sym(C.Change.of(L.structure(~cb)), C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs), C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)}, lift_run_out(~ca, ~cb, ~g, es, xs)) : Laws.valid(~cb, _, L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
+          %Equal.sym(C.Change.of(L.edits(~cb)), C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, xs), C.Change{None{}, out.run(~ca, ~cb, ~g, es, xs)}, lift_run_out(~ca, ~cb, ~g, es, xs)) : Laws.valid(~cb, _, L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
           valid_run(~ca, ~cb, ~g, ~g_ok, es, xs, v)
         case Some{+ys}:
-          %Equal.sym(C.Change.of(L.structure(~cb)), C.lift.run(~L.structure(~ca), ~L.structure(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, ys), C.Change{None{}, out.run(~ca, ~cb, ~g, es, ys)}, lift_run_out(~ca, ~cb, ~g, es, ys)) : Laws.valid(~cb, C.then(L.structure(~cb), C.replace(L.structure(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)), _), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
+          %Equal.sym(C.Change.of(L.edits(~cb)), C.lift.run(~L.edits(~ca), ~L.edits(~cb), ~C.Inc{ys => L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys), ys => e => L.map.edit(~ca, ~cb, ~g, ys, e)}, es, ys), C.Change{None{}, out.run(~ca, ~cb, ~g, es, ys)}, lift_run_out(~ca, ~cb, ~g, es, ys)) : Laws.valid(~cb, C.then(L.edits(~cb), C.replace(L.edits(~cb), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), ys)), _), L.map(~C.Value(ca), ~C.Value(cb), ~C.Inc.f(ca, cb, g), xs))
           valid_run(~ca, ~cb, ~g, ~g_ok, es, ys, v)

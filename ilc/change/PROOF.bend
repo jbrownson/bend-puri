@@ -8,10 +8,13 @@ import ./LAWS.bend as Laws
 def Laws.value(V, D, f):
   {==}
 
-def Laws.delta(V, D, f):
+def Laws.edit_type(V, D, f):
   {==}
 
-def Laws.structure_apply(V, D, f):
+def Laws.edits_apply(V, D, f):
+  {==}
+
+def Laws.change_structure(ce):
   {==}
 
 # Changes to any value
@@ -58,26 +61,26 @@ def Laws.apply_keep(ce, a):
 def Laws.apply_replace(ce, x, a):
   {==}
 
-def Laws.reach(ce, a, b):
-  (C.replace(ce, b), {==})
+def Laws.complete_change_structure(ce):
+  a => b => (C.replace(ce, b), {==})
 
 def Laws.apply_edit(ce, e, a):
   {==}
 
 # Lemma: running appended edits runs the first, then the second.
 law run_append:
-  for ~ce: C.ChangeStructure
-  for xs: List<&2, C.Delta(ce)>
-  for ys: List<&2, C.Delta(ce)>
+  for ~ce: C.Edits
+  for xs: List<&2, C.Edit(ce)>
+  for ys: List<&2, C.Edit(ce)>
   for a: C.Value(ce)
-  {C.run(~ce, List.append(&2, C.Delta(ce), xs, ys), a) == C.run(~ce, ys, C.run(~ce, xs, a)) : C.Value(ce)}
+  {C.run(~ce, List.append(&2, C.Edit(ce), xs, ys), a) == C.run(~ce, ys, C.run(~ce, xs, a)) : C.Value(ce)}
 
 def run_append(ce, xs, ys, a):
   match xs:
     case Nil{}:
       {==}
     case Con{e, t}:
-      run_append(~ce, t, ys, C.ChangeStructure.apply(ce)(e, a))
+      run_append(~ce, t, ys, C.Edits.apply(ce)(e, a))
 
 def Laws.apply_then(ce, p, q, a):
   match p:
@@ -116,7 +119,7 @@ def append_nil(E, xs):
 def Laws.then_keep_right(ce, p):
   match p:
     case C.Change{ps, pes}:
-      %Equal.sym(List<&2, C.Delta(ce)>, List.append(&2, C.Delta(ce), pes, Nil{}), pes, append_nil(C.Delta(ce), pes)) : {C.Change{ps, _} == C.Change{ps, pes} : C.Change.of(ce)}
+      %Equal.sym(List<&2, C.Edit(ce)>, List.append(&2, C.Edit(ce), pes, Nil{}), pes, append_nil(C.Edit(ce), pes)) : {C.Change{ps, _} == C.Change{ps, pes} : C.Change.of(ce)}
       {==}
 
 # Lemma: grouping appends doesn't matter.
@@ -156,7 +159,7 @@ def Laws.then_assoc(ce, p, q, r):
                     case Some{z}:
                       {==}
                     case None{}:
-                      %Equal.sym(List<&2, C.Delta(ce)>, List.append(&2, C.Delta(ce), List.append(&2, C.Delta(ce), pes, qes), res), List.append(&2, C.Delta(ce), pes, List.append(&2, C.Delta(ce), qes, res)), append_assoc(C.Delta(ce), pes, qes, res)) : {C.Change{ps, _} == C.Change{ps, List.append(&2, C.Delta(ce), pes, List.append(&2, C.Delta(ce), qes, res))} : C.Change.of(ce)}
+                      %Equal.sym(List<&2, C.Edit(ce)>, List.append(&2, C.Edit(ce), List.append(&2, C.Edit(ce), pes, qes), res), List.append(&2, C.Edit(ce), pes, List.append(&2, C.Edit(ce), qes, res)), append_assoc(C.Edit(ce), pes, qes, res)) : {C.Change{ps, _} == C.Change{ps, List.append(&2, C.Edit(ce), pes, List.append(&2, C.Edit(ce), qes, res))} : C.Change.of(ce)}
                       {==}
 
 # Mapping a change
@@ -206,7 +209,7 @@ def Laws.lift_edit(ca, cb, g, e, a):
 
 # Lemma: anything, then a change that starts over, is that change.
 law then_restart:
-  for -ce: C.ChangeStructure
+  for -ce: C.Edits
   for p: C.Change.of(ce)
   for z: C.Value(ce)
   for w: C.Change.of(ce)
@@ -226,21 +229,21 @@ def then_restart(ce, p, z, w):
 # Lemma: lifting appended edits lifts the first, then the second from the
 # value the first produced.
 law lift_run_append:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, C.complete(~cb)>
-  for +xs: List<&2, C.Delta(ca)>
-  for +ys: List<&2, C.Delta(ca)>
+  for +xs: List<&2, C.Edit(ca)>
+  for +ys: List<&2, C.Edit(ca)>
   for +a: C.Value(ca)
-  {C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Delta(ca), xs, ys), a) == C.then(cb, C.lift.run(~ca, ~cb, ~g, xs, a), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, xs, a))) : C.Change.of(cb)}
+  {C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Edit(ca), xs, ys), a) == C.then(cb, C.lift.run(~ca, ~cb, ~g, xs, a), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, xs, a))) : C.Change.of(cb)}
 
 def lift_run_append(ca, cb, g, xs, ys, a):
   match xs:
     case Nil{}:
       Equal.sym(C.Change.of(cb), C.then(cb, C.keep(cb), C.lift.run(~ca, ~cb, ~g, ys, a)), C.lift.run(~ca, ~cb, ~g, ys, a), Laws.then_keep_left(cb, C.lift.run(~ca, ~cb, ~g, ys, a)))
     case Con{+e, +t}:
-      %Equal.sym(C.Change.of(cb), C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Delta(ca), t, ys), C.ChangeStructure.apply(ca)(e, a)), C.then(cb, C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a)))), lift_run_append(~ca, ~cb, ~g, t, ys, C.ChangeStructure.apply(ca)(e, a))) : {C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), _) == C.then(cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a))), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a)))) : C.Change.of(cb)}
-      Equal.sym(C.Change.of(cb), C.then(cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a))), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a)))), C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.then(cb, C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a))))), Laws.then_assoc(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a)))))
+      %Equal.sym(C.Change.of(cb), C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Edit(ca), t, ys), C.Edits.apply(ca)(e, a)), C.then(cb, C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.Edits.apply(ca)(e, a)))), lift_run_append(~ca, ~cb, ~g, t, ys, C.Edits.apply(ca)(e, a))) : {C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), _) == C.then(cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a))), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.Edits.apply(ca)(e, a)))) : C.Change.of(cb)}
+      Equal.sym(C.Change.of(cb), C.then(cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a))), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.Edits.apply(ca)(e, a)))), C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.then(cb, C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.Edits.apply(ca)(e, a))))), Laws.then_assoc(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), C.lift.run(~ca, ~cb, ~g, ys, C.run(~ca, t, C.Edits.apply(ca)(e, a)))))
 
 def Laws.lift_then(ca, cb, g, p, q, a):
   match p:
@@ -261,17 +264,17 @@ def Laws.lift_then(ca, cb, g, p, q, a):
                 case Some{+y}:
                   Equal.sym(C.Change.of(cb), C.then(cb, C.lift.df(~ca, ~cb, ~g, C.Change{Some{x}, pes}, a), C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(y)), C.lift.run(~ca, ~cb, ~g, qes, y))), C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(y)), C.lift.run(~ca, ~cb, ~g, qes, y)), then_restart(cb, C.lift.df(~ca, ~cb, ~g, C.Change{Some{x}, pes}, a), C.Inc.f(ca, C.complete(~cb), g)(y), C.lift.run(~ca, ~cb, ~g, qes, y)))
                 case None{}:
-                  %Equal.sym(C.Change.of(cb), C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Delta(ca), pes, qes), x), C.then(cb, C.lift.run(~ca, ~cb, ~g, pes, x), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))), lift_run_append(~ca, ~cb, ~g, pes, qes, x)) : {C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), _) == C.then(cb, C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), C.lift.run(~ca, ~cb, ~g, pes, x)), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))) : C.Change.of(cb)}
+                  %Equal.sym(C.Change.of(cb), C.lift.run(~ca, ~cb, ~g, List.append(&2, C.Edit(ca), pes, qes), x), C.then(cb, C.lift.run(~ca, ~cb, ~g, pes, x), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))), lift_run_append(~ca, ~cb, ~g, pes, qes, x)) : {C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), _) == C.then(cb, C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), C.lift.run(~ca, ~cb, ~g, pes, x)), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))) : C.Change.of(cb)}
                   Equal.sym(C.Change.of(cb), C.then(cb, C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), C.lift.run(~ca, ~cb, ~g, pes, x)), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))), C.then(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), C.then(cb, C.lift.run(~ca, ~cb, ~g, pes, x), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x)))), Laws.then_assoc(cb, C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)), C.lift.run(~ca, ~cb, ~g, pes, x), C.lift.run(~ca, ~cb, ~g, qes, C.run(~ca, pes, x))))
 
 # Lemma: lift's derivative is correct for a run of edits, if g is for
 # each edit.
 law lift_run_ok:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, C.complete(~cb)>
   for ~g_ok: C.Inc.ok(ca, C.complete(~cb), g)
-  for es: List<&2, C.Delta(ca)>
+  for es: List<&2, C.Edit(ca)>
   for +a: C.Value(ca)
   {C.apply(~cb, C.lift.run(~ca, ~cb, ~g, es, a), C.Inc.f(ca, C.complete(~cb), g)(a)) == C.Inc.f(ca, C.complete(~cb), g)(C.run(~ca, es, a)) : C.Value(cb)}
 
@@ -280,15 +283,15 @@ def lift_run_ok(ca, cb, g, g_ok, es, a):
     case Nil{}:
       {==}
     case Con{+e, +t}:
-      %Equal.sym(C.Value(cb), C.apply(~cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a))), C.Inc.f(ca, C.complete(~cb), g)(a)), C.apply(~cb, C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), C.apply(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.Inc.f(ca, C.complete(~cb), g)(a))), Laws.apply_then(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), C.Inc.f(ca, C.complete(~cb), g)(a))) : {_ == C.Inc.f(ca, C.complete(~cb), g)(C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a))) : C.Value(cb)}
-      %Equal.sym(C.Value(cb), C.apply(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.Inc.f(ca, C.complete(~cb), g)(a)), C.Inc.f(ca, C.complete(~cb), g)(C.ChangeStructure.apply(ca)(e, a)), g_ok(a, e)) : {C.apply(~cb, C.lift.run(~ca, ~cb, ~g, t, C.ChangeStructure.apply(ca)(e, a)), _) == C.Inc.f(ca, C.complete(~cb), g)(C.run(~ca, t, C.ChangeStructure.apply(ca)(e, a))) : C.Value(cb)}
-      lift_run_ok(~ca, ~cb, ~g, ~g_ok, t, C.ChangeStructure.apply(ca)(e, a))
+      %Equal.sym(C.Value(cb), C.apply(~cb, C.then(cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a))), C.Inc.f(ca, C.complete(~cb), g)(a)), C.apply(~cb, C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), C.apply(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.Inc.f(ca, C.complete(~cb), g)(a))), Laws.apply_then(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), C.Inc.f(ca, C.complete(~cb), g)(a))) : {_ == C.Inc.f(ca, C.complete(~cb), g)(C.run(~ca, t, C.Edits.apply(ca)(e, a))) : C.Value(cb)}
+      %Equal.sym(C.Value(cb), C.apply(~cb, C.Inc.df(ca, C.complete(~cb), g)(a, e), C.Inc.f(ca, C.complete(~cb), g)(a)), C.Inc.f(ca, C.complete(~cb), g)(C.Edits.apply(ca)(e, a)), g_ok(a, e)) : {C.apply(~cb, C.lift.run(~ca, ~cb, ~g, t, C.Edits.apply(ca)(e, a)), _) == C.Inc.f(ca, C.complete(~cb), g)(C.run(~ca, t, C.Edits.apply(ca)(e, a))) : C.Value(cb)}
+      lift_run_ok(~ca, ~cb, ~g, ~g_ok, t, C.Edits.apply(ca)(e, a))
 
 # Lemma: lift's derivative is correct at every change, if g is at every
 # edit.
 law lift_df_ok:
-  for ~ca: C.ChangeStructure
-  for ~cb: C.ChangeStructure
+  for ~ca: C.Edits
+  for ~cb: C.Edits
   for ~g: C.Inc<ca, C.complete(~cb)>
   for ~g_ok: C.Inc.ok(ca, C.complete(~cb), g)
   for d: C.Change.of(ca)
