@@ -67,42 +67,12 @@ law edit_structure:
   for ~ca: C.EditStructure
   {L.edit_structure(~ca) == C.EditStructure{List<&2, C.Value(ca)>, L.Edit.of(ca), e => xs => L.edit(~ca, e, xs)} : C.EditStructure}
 
-# LAW: a list's own edits are not a change structure, if it has elements
-# at all: no one edit gets from the empty list to a list of two, so they
-# don't reach.
-law edits_not_change_structure:
-  for ~ca: C.EditStructure
-  for +x: C.Value(ca)
-  for h: C.reaches(L.edit_structure(~ca))
-  Empty
-
 # LAW: patching applies a run of edits, in order.
 law patch:
   for ~ca: C.EditStructure
   for es: List<&2, L.Edit.of(ca)>
   for xs: List<&2, C.Value(ca)>
   {L.patch(~ca, es, xs) == C.run(~L.edit_structure(~ca), es, xs) : List<&2, C.Value(ca)>}
-
-# LAW: diff clears xs, then fills with ys.
-law diff:
-  for ~ca: C.EditStructure
-  for xs: List<&2, C.Value(ca)>
-  for ys: List<&2, C.Value(ca)>
-  {L.diff(~ca, xs, ys) == List.append(&2, L.Edit.of(ca), L.clear(~ca, xs), L.fill(~ca, ys)) : List<&2, L.Edit.of(ca)>}
-
-# LAW: a list's change structure is runs of its edits.
-law change_structure:
-  for ~ca: C.EditStructure
-  {C.ChangeStructure.structure(L.change_structure(~ca)) == C.runs(~L.edit_structure(~ca)) : C.EditStructure}
-
-# It follows that:
-
-# LAW: diff gets from xs to ys.
-law diff_ok:
-  for ~ca: C.EditStructure
-  for +xs: List<&2, C.Value(ca)>
-  for +ys: List<&2, C.Value(ca)>
-  {L.patch(~ca, L.diff(~ca, xs, ys), xs) == ys : List<&2, C.Value(ca)>}
 
 # LAW: inserting at i puts x before the element at i, or at the end.
 law edit_insert:
@@ -172,6 +142,41 @@ law shape:
   for ~ca: C.EditStructure
   for es: List<&2, L.Edit.of(ca)>
   {L.shape(~ca, es) == C.map.edits(~L.Edit.of(ca), ~L.Edit<Unit, Unit>, ~(e => L.Edit.map(~C.Value(ca), ~C.Edit(ca), ~Unit, ~Unit, ~(x => Unit{}), ~(u => Unit{}), e)), es) : List<&2, L.Edit<Unit, Unit>>}
+
+# Getting from any list to any other
+# ----------------------------------
+# One edit can't get from any list to any other, but a run can: diff
+# clears the list, then fills it with the other.
+
+# LAW: a list's own edits are not a change structure, if it has elements
+# at all: no one edit gets from the empty list to a list of two, so they
+# don't reach.
+law edits_not_change_structure:
+  for ~ca: C.EditStructure
+  for +x: C.Value(ca)
+  for h: C.reaches(L.edit_structure(~ca))
+  Empty
+
+# LAW: diff clears xs, then fills with ys.
+law diff:
+  for ~ca: C.EditStructure
+  for xs: List<&2, C.Value(ca)>
+  for ys: List<&2, C.Value(ca)>
+  {L.diff(~ca, xs, ys) == List.append(&2, L.Edit.of(ca), L.clear(~ca, xs), L.fill(~ca, ys)) : List<&2, L.Edit.of(ca)>}
+
+# LAW: a list's change structure is runs of its edits.
+law change_structure:
+  for ~ca: C.EditStructure
+  {C.ChangeStructure.structure(L.change_structure(~ca)) == C.runs(~L.edit_structure(~ca)) : C.EditStructure}
+
+# It follows that:
+
+# LAW: diff gets from xs to ys.
+law diff_ok:
+  for ~ca: C.EditStructure
+  for +xs: List<&2, C.Value(ca)>
+  for +ys: List<&2, C.Value(ca)>
+  {L.patch(~ca, L.diff(~ca, xs, ys), xs) == ys : List<&2, C.Value(ca)>}
 
 # Mapping
 # -------
