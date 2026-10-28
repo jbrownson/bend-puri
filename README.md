@@ -34,33 +34,34 @@ every module's proofs.
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
 
-- `change/`: changes to any value. An edit structure (`EditStructure`) says
+- `change/`: edits to any value. An edit structure (`EditStructure`) says
   how a type's values are edited: the type of the values (`Value`), the type
   of their edits (`Edit`), and how to apply one. A change structure
   (`ChangeStructure`) is an edit structure with the proof that one edit gets
-  from any value to any other, which a list's single edits can't give.
-  `runs` are an edit structure's edits one after another, and `complete`
-  makes a change structure from any edit structure: its edits are `Change`s
-  (`changes`), an optional new value to start over from, then a run of
-  edits. That adds no change (`keep`), starting over (`replace`), and one
-  change then another (`then`). An `Inc<ca, cb>` pairs a function, from
-  values edited as `ca` says to values edited as `cb` says, with its
-  derivative, which gives the change to the function's result from a change
-  to its input. `lift` turns an `Inc` whose derivative handles single edits
-  into one that handles any change. The laws say what applying each change
-  returns, what `lift`'s derivative returns for each kind of change, and
+  from any value to any other (`reaches`). Two layers build on any edit
+  structure: `runs`, whose edits are runs of its edits applied in order (no
+  edits leaves a value alone, and one run then another is the two joined),
+  and `whole`, whose edits are its edits or a replacement with a whole new
+  value, which makes a change structure of anything. An `Inc<ca, cb>` pairs
+  a function, from values edited as `ca` says to values edited as `cb` says,
+  with its derivative, which gives the edit to the function's result from an
+  edit to its input. `lift` turns an `Inc` whose derivative gives a run for
+  one edit into one that handles runs, and `whole.lift` lifts one to values
+  that can also be replaced. The laws say what each operation returns, and
   that lifting a correct `Inc` gives a correct one.
 - `list/`: a list's edits (insert, delete, and update an element in place),
-  given how its elements are edited (`edit_structure`, which `C.complete`
-  completes), `patch` to apply a change, and `map.inc`, which maps an `Inc`
-  over lists; its derivative is `dmap`. An element's edits can be of any
-  type, with their own way to apply: a `Change` of the element, or something
-  else entirely. The laws cover changes whose positions are in range
-  (`valid`), and say what each edit does, that a list's own edits aren't a
-  change structure but its runs of edits are, without replacing, what `dmap`
-  returns for each kind of change, that `map.inc(g)` is correct when `g` is,
-  that `dmap` acts exactly where the change acts, and that it turns valid
-  changes into valid ones.
+  given how its elements are edited (`edit_structure`), `patch` to apply a
+  run of them, `diff`, a run from any list to any other, and `map.inc`,
+  which maps an `Inc` over lists; its derivative is `dmap`. A list's change
+  structure (`change_structure`) is runs of its edits: single edits don't
+  reach, but runs do, by `diff`, without replacing. An element's edits can
+  be of any type, with their own way to apply: runs of a list's edits,
+  replacing a plain value (`C.whole(~C.none(~A))`), or something else
+  entirely. The laws cover edits whose positions are in range (`valid`), and
+  say what each edit does, that `diff` gets there, what `dmap` returns for
+  each edit, that `map.inc(g)` is correct when `g` is, that `dmap` acts
+  exactly where the edits act, and that it turns valid edits into valid
+  ones.
 
 The approach follows Phil Freeman's
 [Purview](https://github.com/paf31/purescript-purview), a PureScript UI
@@ -93,9 +94,9 @@ Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
   select, under a panel that blocks both.
 - `app_test.bend`: replays scripted events through `app.bend` without a
   window.
-- `ilc.bend`: `dmap` on concrete lists of numbers: the change that mapping
-  makes, checked against mapping from scratch, and a map over lists of
-  lists.
+- `ilc.bend`: `dmap` on concrete lists of numbers: the edits that mapping
+  makes, checked against mapping from scratch, a map over lists of lists,
+  and `diff`'s run between two lists.
 
 ## Dependencies
 
@@ -115,7 +116,7 @@ bend ilc/list/PROOF.bend      # or one module's laws
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
-bend examples/ilc.bend        # computes a mapped list's change
+bend examples/ilc.bend        # computes a mapped list's edits
 bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 

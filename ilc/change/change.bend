@@ -2,8 +2,8 @@ import Base
 
 # How values are edited: values of type Value, edits of type Edit, and
 # `apply`, which applies one. These are the edits a type supplies; they
-# needn't get from every value to every other, include one that does
-# nothing, or compose. C.complete adds those.
+# needn't get from every value to every other. runs and whole add ways to
+# get further.
 type EditStructure is Type:
   EditStructure{Value: Data, Edit: Data, apply: Edit -> Value -> Value}
 
@@ -36,44 +36,8 @@ def ChangeStructure.structure(c: ChangeStructure) -> EditStructure:
     case ChangeStructure{s, r}:
       s
 
-# Changes to any value: a Change is a run of a type's edits, after an
-# optional new value to start from. Changes make a change structure
-# whatever the edits are: replace gets from any value to any other, keep
-# (no new value, no edits) does nothing, and then composes two changes.
-type Change<-A: Data, -E: Data> is Data:
-  Change{start: Maybe<&2, A>, edits: List<&2, E>}
-
-# The Change made of ce's edits.
-def Change.of(-ce: EditStructure) -> Data:
-  Change<Value(ce), Edit(ce)>
-
-# No change.
-def keep(-ce: EditStructure) -> Change.of(ce):
-  Change{None{}, Nil{}}
-
-# Starting over with x.
-def replace(-ce: EditStructure, x: Value(ce)) -> Change.of(ce):
-  Change{Some{x}, Nil{}}
-
-# One edit.
-def edit(-ce: EditStructure, e: Edit(ce)) -> Change.of(ce):
-  Change{None{}, [e]}
-
-# p, then q: q's edits after p's, unless q starts over, which discards p.
-def then(-ce: EditStructure, p: Change.of(ce), q: Change.of(ce)) -> Change.of(ce):
-  match p:
-    case Change{ps, pes}:
-      match q:
-        case Change{qs, qes}:
-          match qs:
-            case Some{y}:
-              Change{Some{y}, qes}
-            case None{}:
-              Change{ps, List.append(&2, Edit(ce), pes, qes)}
-
-# The edits of values that have none of their own: they change only as a
-# whole, by the replacement C.complete adds.
-def whole(~A: Data) -> EditStructure:
+# The edits of values that have none of their own.
+def none(~A: Data) -> EditStructure:
   EditStructure{A, Empty, e => a => Empty.absurd(A, e)}
 
 # The value a run of edits leaves, applied in order.
@@ -84,36 +48,44 @@ def run(~ce: EditStructure, es: List<&2, Edit(ce)>, a: Value(ce)) -> Value(ce):
     case Con{e, t}:
       run(~ce, t, EditStructure.apply(ce)(e, a))
 
-# Runs of ce's edits, applied in order.
+# Runs of ce's edits, applied in order: no edits leaves a value as it is,
+# and one run then another is the two joined.
 def runs(~ce: EditStructure) -> EditStructure:
   EditStructure{Value(ce), List<&2, Edit(ce)>, es => a => run(~ce, es, a)}
 
-# The value a change starts from: its new value if it has one, else a.
-def start(-A: Data, m: Maybe<&2, A>, a: A) -> A:
-  match m:
-    case None{}:
-      a
-    case Some{x}:
+# Running joined runs runs the first, then the second.
+def run_append(~ce: EditStructure, xs: List<&2, Edit(ce)>, ys: List<&2, Edit(ce)>, a: Value(ce)) ->
+  {run(~ce, List.append(&2, Edit(ce), xs, ys), a) == run(~ce, ys, run(~ce, xs, a)) : Value(ce)}:
+  match xs:
+    case Nil{}:
+      {==}
+    case Con{e, t}:
+      run_append(~ce, t, ys, EditStructure.apply(ce)(e, a))
+
+# An edit of a value: a whole new one, or one of its own edits.
+type Whole<-A: Data, -E: Data> is Data:
+  Replace{x: A}
+  Apply{e: E}
+
+def whole.apply(~ce: EditStructure, w: Whole<Value(ce), Edit(ce)>, a: Value(ce)) -> Value(ce):
+  match w:
+    case Replace{x}:
       x
+    case Apply{e}:
+      EditStructure.apply(ce)(e, a)
 
-# The value after a change, given how its edits apply.
-def apply(~ce: EditStructure, d: Change.of(ce), a: Value(ce)) -> Value(ce):
-  match d:
-    case Change{s, es}:
-      run(~ce, es, start(Value(ce), s, a))
+# ce's edits, and replacing the whole value.
+def whole(~ce: EditStructure) -> EditStructure:
+  EditStructure{Value(ce), Whole<Value(ce), Edit(ce)>, w => a => whole.apply(~ce, w, a)}
 
-# The edit structure of ce's Changes, which C.apply applies.
-def changes(~ce: EditStructure) -> EditStructure:
-  EditStructure{Value(ce), Change.of(ce), d => a => apply(~ce, d, a)}
+# whole(ce), which is a change structure whatever ce is: replacing gets
+# from any value to any other.
+def whole.change_structure(~ce: EditStructure) -> ChangeStructure:
+  ChangeStructure{whole(~ce), a => b => (Replace{b}, {==})}
 
-# Completes ce into a change structure: ce's Changes, which get from any
-# value to any other by replacing.
-def complete(~ce: EditStructure) -> ChangeStructure:
-  ChangeStructure{changes(~ce), a => b => (replace(ce, b), {==})}
-
-# An incremental function, from values that change as ca says to values
-# that change as cb says: a function f, and its derivative df, which gives
-# the change to f's result from a value and the value's change.
+# An incremental function, from values edited as ca says to values edited
+# as cb says: a function f, and its derivative df, which gives the edit to
+# f's result from a value and the value's edit.
 type Inc<-ca: EditStructure, -cb: EditStructure> is Type:
   Inc{f: Value(ca) -> Value(cb), df: Value(ca) -> Edit(ca) -> Edit(cb)}
 
@@ -127,50 +99,44 @@ def Inc.df(-ca: EditStructure, -cb: EditStructure, g: Inc<ca, cb>) -> Value(ca) 
     case Inc{f, df}:
       df
 
-# g's derivative is correct: applying its change to f(a) gives f of the
-# changed value.
+# g's derivative is correct: applying its edit to f(a) gives f of the
+# edited value.
 def Inc.ok(-ca: EditStructure, -cb: EditStructure, g: Inc<ca, cb>) -> Type:
   @a: Value(ca) -> @d: Edit(ca) -> {EditStructure.apply(cb)(Inc.df(ca, cb, g)(a, d), Inc.f(ca, cb, g)(a)) == Inc.f(ca, cb, g)(EditStructure.apply(ca)(d, a)) : Value(cb)}
 
-# The derivative lift builds from g's, for a run of edits from the value
-# before them: each edit's change from g, one after another.
-def lift.run(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>, es: List<&2, Edit(ca)>,
-  +a: Value(ca)) -> Change.of(cb):
+# lift's derivative, for a run of edits from the value before them: g's
+# run for each edit, joined in order.
+def lift.run(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, runs(~cb)>, es: List<&2, Edit(ca)>,
+  +a: Value(ca)) -> List<&2, Edit(cb)>:
   match es:
     case Nil{}:
-      keep(cb)
+      Nil{}
     case Con{+e, t}:
-      then(cb, Inc.df(ca, changes(~cb), g)(a, e), lift.run(~ca, ~cb, ~g, t, EditStructure.apply(ca)(e, a)))
+      List.append(&2, Edit(cb), Inc.df(ca, runs(~cb), g)(a, e), lift.run(~ca, ~cb, ~g, t, EditStructure.apply(ca)(e, a)))
 
-# lift's derivative: a new start replaces the result with f of the new
-# value, and the edits follow from whichever value they start from.
-def lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>, d: Change.of(ca), +a: Value(ca)) ->
-  Change.of(cb):
-  match d:
-    case Change{s, es}:
-      match s:
-        case None{}:
-          lift.run(~ca, ~cb, ~g, es, a)
-        case Some{+x}:
-          then(cb, replace(cb, Inc.f(ca, changes(~cb), g)(x)), lift.run(~ca, ~cb, ~g, es, x))
+# Lifts g, whose derivative gives a run for one edit, to an Inc whose
+# derivative handles runs.
+def lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, runs(~cb)>) -> Inc<runs(~ca), runs(~cb)>:
+  Inc{Inc.f(ca, runs(~cb), g), a => es => lift.run(~ca, ~cb, ~g, es, a)}
 
-# Lifts g, whose derivative handles one edit as ca says, to an Inc whose
-# derivative handles any change.
-def lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, changes(~cb)>) -> Inc<changes(~ca), changes(~cb)>:
-  Inc{Inc.f(ca, changes(~cb), g), a => d => lift.df(~ca, ~cb, ~g, d, a)}
+# whole.lift's derivative: replacing the input replaces the result with f
+# of the new value, and an edit gives g's edit.
+def whole.lift.df(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, cb>, w: Whole<Value(ca), Edit(ca)>,
+  a: Value(ca)) -> Whole<Value(cb), Edit(cb)>:
+  match w:
+    case Replace{x}:
+      Replace{Inc.f(ca, cb, g)(x)}
+    case Apply{e}:
+      Apply{Inc.df(ca, cb, g)(a, e)}
 
-# f, with the derivative that recomputes: whatever the change, replace the
+# Lifts g to values that can also be replaced.
+def whole.lift(~ca: EditStructure, ~cb: EditStructure, ~g: Inc<ca, cb>) -> Inc<whole(~ca), whole(~cb)>:
+  Inc{Inc.f(ca, cb, g), a => w => whole.lift.df(~ca, ~cb, ~g, w, a)}
+
+# f, with the derivative that recomputes: whatever the edit, replace the
 # result.
-def recompute(~ca: EditStructure, ~cb: EditStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, changes(~cb)>:
-  Inc{f, a => d => replace(cb, f(EditStructure.apply(ca)(d, a)))}
-
-# A change's new value mapped by fa, if it has one.
-def map.start(~A: Data, ~B: Data, ~fa: A -> B, m: Maybe<&2, A>) -> Maybe<&2, B>:
-  match m:
-    case None{}:
-      None{}
-    case Some{x}:
-      Some{fa(x)}
+def recompute(~ca: EditStructure, ~cb: EditStructure, ~f: Value(ca) -> Value(cb)) -> Inc<ca, whole(~cb)>:
+  Inc{f, a => e => Replace{f(EditStructure.apply(ca)(e, a))}}
 
 # Edits mapped by fe, in order.
 def map.edits(~EA: Data, ~EB: Data, ~fe: EA -> EB, es: List<&2, EA>) -> List<&2, EB>:
@@ -179,11 +145,3 @@ def map.edits(~EA: Data, ~EB: Data, ~fe: EA -> EB, es: List<&2, EA>) -> List<&2,
       Nil{}
     case Con{e, t}:
       fe(e) <> map.edits(~EA, ~EB, ~fe, t)
-
-# A change with its new value mapped by fa and its edits by fe: the same
-# changes, in the same order.
-def map(~A: Data, ~EA: Data, ~B: Data, ~EB: Data, ~fa: A -> B, ~fe: EA -> EB,
-  d: Change<A, EA>) -> Change<B, EB>:
-  match d:
-    case Change{s, es}:
-      Change{map.start(~A, ~B, ~fa, s), map.edits(~EA, ~EB, ~fe, es)}
