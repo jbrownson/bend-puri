@@ -1,7 +1,8 @@
 import Base
 
 # How values change: values of type Value change by changes of type Delta,
-# and `apply` applies one. (The theory calls this a change structure.)
+# and `apply` applies one. This is only the apply part of what the theory
+# calls a change structure; Change below adds the rest.
 type Changes is Type:
   Changes{Value: Data, Delta: Data, apply: Delta -> Value -> Value}
 
@@ -22,7 +23,9 @@ def Changes.apply(c: Changes) -> Delta(c) -> Value(c) -> Value(c):
 
 # Changes to any value. A type supplies its own edits, and how one
 # applies; Change adds what every type has: no change, starting over with
-# a new value, and one change then another.
+# a new value, and one change then another. Those make it a full change
+# structure: a change that does nothing, a change from any value to any
+# other, and composition.
 type Change<-A: Data, -E: Data> is Data:
   Keep{}
   Replace{x: A}

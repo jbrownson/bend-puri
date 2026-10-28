@@ -6,23 +6,24 @@ import ./change.bend as C
 # How values change
 # -----------------
 # A Changes says how values change: values of type Value, by changes of
-# type Delta, which `apply` applies.
+# type Delta, which `apply` applies. It is only the apply part of what the
+# theory calls a change structure.
 
-# LAW: a change structure's values have its Value type.
+# LAW: Value is the type of the values.
 law value:
   for ~V: Data
   for ~D: Data
   for ~f: D -> V -> V
   {C.Value(C.Changes{V, D, f}) == V : Data}
 
-# LAW: its changes have its Delta type.
+# LAW: Delta is the type of their changes.
 law delta:
   for ~V: Data
   for ~D: Data
   for ~f: D -> V -> V
   {C.Delta(C.Changes{V, D, f}) == D : Data}
 
-# LAW: it applies changes by its function.
+# LAW: Changes.apply applies a change by its function.
 law changes_apply:
   for ~V: Data
   for ~D: Data
@@ -31,8 +32,10 @@ law changes_apply:
 
 # Changes to any value
 # --------------------
-# A type supplies its edits, and how one applies, as a change structure
-# ce. C.Change.of(ce) is the Change made of ce's edits.
+# A type supplies its edits, and how one applies, as a Changes ce.
+# C.Change.of(ce) is the Change made of ce's edits. With Keep (a change
+# that does nothing), Replace (a change from any value to any other) and
+# Then (composition), a Change has the rest of a change structure.
 
 # LAW: a Change of ce's edits is a Change of its values and edits.
 law change_of:
