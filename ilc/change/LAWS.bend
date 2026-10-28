@@ -123,6 +123,14 @@ law apply_replace:
   for a: C.Value(ce)
   {C.apply(~ce, C.replace(ce, x), a) == x : C.Value(ce)}
 
+# LAW: one change gets from any value to any other.
+law reach:
+  for ~ce: C.ChangeStructure
+  for a: C.Value(ce)
+  for +b: C.Value(ce)
+  exs d: C.Change.of(ce)
+  {C.apply(~ce, d, a) == b : C.Value(ce)}
+
 # LAW: an edit is applied as ce says.
 law apply_edit:
   for ~ce: C.ChangeStructure

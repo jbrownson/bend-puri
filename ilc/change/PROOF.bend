@@ -58,6 +58,9 @@ def Laws.apply_keep(ce, a):
 def Laws.apply_replace(ce, x, a):
   {==}
 
+def Laws.reach(ce, a, b):
+  (C.replace(ce, b), {==})
+
 def Laws.apply_edit(ce, e, a):
   {==}
 
