@@ -98,6 +98,13 @@ Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
 - `ilc.bend`: `dmap` on concrete lists of numbers: the edits that mapping
   makes, checked against mapping from scratch, a map over lists of lists,
   and `diff`'s run between two lists.
+- `bars.bend`: an interactive window of bars you grow (left-click), remove
+  (right-click), add ("+") and reset (the grey button). Each press is a run
+  of list edits, and the bars' heights are a cached mapped list kept up to
+  date by patching it with `dmap`'s edits; reset's run comes from `diff`.
+- `bars_test.bend`: replays presses through `bars.bend` without a window,
+  checking each time that the cached heights agree with mapping the numbers
+  from scratch.
 
 ## Dependencies
 
@@ -118,6 +125,7 @@ bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
 bend examples/ilc.bend        # computes a mapped list's edits
+bend examples/bars_test.bend  # replays presses through the bars app
 bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 
@@ -128,10 +136,11 @@ kernel, which has its own proof in Lean, and confirms nothing relies on
 on first use.
 
 Windows only open from a native build; `bend examples/app.bend` alone runs
-on Bend's JS path, which has no window. To open the interactive window:
+on Bend's JS path, which has no window. To open the interactive windows:
 
 ```sh
 bend examples/app.bend -o app && ./app
+bend examples/bars.bend -o bars && ./bars
 ```
 
 On Linux this needs clang and the X11 headers (`clang libx11-dev` on
