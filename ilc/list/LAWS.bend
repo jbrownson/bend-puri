@@ -91,7 +91,7 @@ law edit_delete:
   for v: has(C.Value(ca), xs, i)
   {L.edit(~ca, L.Delete{i}, xs) == List.append(&2, C.Value(ca), List.take(&2, C.Value(ca), xs, i), List.drop(&2, C.Value(ca), xs, 1n+i)) : List<&2, C.Value(ca)>}
 
-# LAW: updating the element at i applies the change to it, in place.
+# LAW: updating the element at i applies the edit to it, in place.
 law edit_update_inside:
   for ~ca: C.EditStructure
   for xs: List<&2, C.Value(ca)>
@@ -124,7 +124,7 @@ law edit_map_delete:
   for i: Nat
   {L.Edit.map(~A, ~DA, ~B, ~DB, ~fa, ~fd, L.Delete{i}) == L.Delete{i} : L.Edit<B, DB>}
 
-# LAW: mapping an update maps the element's change.
+# LAW: mapping an update maps the element's edit.
 law edit_map_update:
   for ~A: Data
   for ~DA: Data
