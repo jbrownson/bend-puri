@@ -27,7 +27,10 @@ def reaches(-ce: EditStructure) -> Type:
   @a: Value(ce) -> @b: Value(ce) -> &d: Edit(ce) -> {EditStructure.apply(ce)(d, a) == b : Value(ce)}
 
 # A change structure: an edit structure, with the proof that one edit gets
-# from any value to any other.
+# from any value to any other. reach is live rather than erased, so the
+# proof counts as evidence and its edit can be used. Change structures are
+# only passed as templates, so this costs nothing at runtime; revisit if
+# one is ever built in a hot path.
 type ChangeStructure is Type:
   ChangeStructure{structure: EditStructure, reach: reaches(structure)}
 
