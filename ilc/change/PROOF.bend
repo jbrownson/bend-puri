@@ -49,6 +49,9 @@ def Laws.then_edits(ce, s, ps, qs):
 def Laws.complete(ce):
   {==}
 
+def Laws.whole(A):
+  {==}
+
 def Laws.apply_keep(ce, a):
   {==}
 

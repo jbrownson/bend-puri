@@ -58,15 +58,10 @@ def then(-ce: ChangeStructure, p: Change.of(ce), q: Change.of(ce)) -> Change.of(
             case None{}:
               Change{ps, List.append(&2, Delta(ce), pes, qes)}
 
-# The edits of a type that has none of its own: its values change only by
-# replacement.
-type Whole is Data:
-
-def Whole.apply(~A: Data, e: Whole, a: A) -> A:
-  match e:
-
-def Whole.structure(~A: Data) -> ChangeStructure:
-  ChangeStructure{A, Whole, e => a => Whole.apply(~A, e, a)}
+# How values change that have no edits of their own: only as a whole, by
+# the replacement C.complete adds.
+def whole(~A: Data) -> ChangeStructure:
+  ChangeStructure{A, Empty, e => a => Empty.absurd(A, e)}
 
 # The value a run of edits leaves, applied in order.
 def run(~ce: ChangeStructure, es: List<&2, Delta(ce)>, a: Value(ce)) -> Value(ce):

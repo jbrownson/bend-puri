@@ -103,6 +103,11 @@ law complete:
   for ~ce: C.ChangeStructure
   {C.complete(~ce) == C.ChangeStructure{C.Value(ce), C.Change.of(ce), d => a => C.apply(~ce, d, a)} : C.ChangeStructure}
 
+# LAW: values that change only as a whole have no edits of their own.
+law whole:
+  for ~A: Data
+  {C.whole(~A) == C.ChangeStructure{A, Empty, e => a => Empty.absurd(A, e)} : C.ChangeStructure}
+
 # It follows that:
 
 # LAW: keeping changes nothing.

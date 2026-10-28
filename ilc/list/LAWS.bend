@@ -56,7 +56,7 @@ def valid(~ca: C.ChangeStructure, d: C.Change.of(L.structure(~ca)), +xs: List<&2
 # Edits
 # -----
 # A list's elements change as ca says: a value that only changes whole by
-# C.complete(~C.Whole.structure(~A)), a list by
+# C.complete(~C.whole(~A)), a list by
 # C.complete(~L.structure(~cb)). L.structure(ca) says how a list changes
 # by one edit, L.Edit.of(ca); its completion adds keeping, replacing and
 # one change then another. List.take(xs, i) is the first i elements,
