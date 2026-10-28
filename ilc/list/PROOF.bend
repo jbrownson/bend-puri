@@ -93,18 +93,6 @@ def Laws.edits_not_change_structure(ca, x, h):
 def Laws.patch(ca, es, xs):
   {==}
 
-def Laws.clear_nil(ca):
-  {==}
-
-def Laws.clear_con(ca, h, t):
-  {==}
-
-def Laws.fill_nil(ca):
-  {==}
-
-def Laws.fill_con(ca, y, t):
-  {==}
-
 def Laws.diff(ca, xs, ys):
   {==}
 

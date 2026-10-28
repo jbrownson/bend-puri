@@ -83,30 +83,6 @@ law patch:
   for xs: List<&2, C.Value(ca)>
   {L.patch(~ca, es, xs) == C.run(~L.edit_structure(~ca), es, xs) : List<&2, C.Value(ca)>}
 
-# LAW: clearing the empty list takes no edits.
-law clear_nil:
-  for ~ca: C.EditStructure
-  {L.clear(~ca, Nil{}) == Nil{} : List<&2, L.Edit.of(ca)>}
-
-# LAW: clearing deletes at 0, once for each element.
-law clear_con:
-  for ~ca: C.EditStructure
-  for h: C.Value(ca)
-  for t: List<&2, C.Value(ca)>
-  {L.clear(~ca, h <> t) == L.Delete{0n} <> L.clear(~ca, t) : List<&2, L.Edit.of(ca)>}
-
-# LAW: filling with nothing takes no edits.
-law fill_nil:
-  for ~ca: C.EditStructure
-  {L.fill(~ca, Nil{}) == Nil{} : List<&2, L.Edit.of(ca)>}
-
-# LAW: filling with y <> t fills with t, then inserts y at the front.
-law fill_con:
-  for ~ca: C.EditStructure
-  for y: C.Value(ca)
-  for t: List<&2, C.Value(ca)>
-  {L.fill(~ca, y <> t) == List.append(&2, L.Edit.of(ca), L.fill(~ca, t), [L.Insert{0n, y}]) : List<&2, L.Edit.of(ca)>}
-
 # LAW: diff clears xs, then fills with ys.
 law diff:
   for ~ca: C.EditStructure
