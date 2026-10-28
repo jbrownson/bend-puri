@@ -51,10 +51,10 @@ def valid(~ca: C.Changes, d: L.Change(ca), +xs: List<&2, C.Value(ca)>) -> Type:
 
 # Edits
 # -----
-# A list's elements change as ca says: a whole value by
-# C.changes(C.Whole.changes), a list by L.changes. L.Edit.of(ca) and
-# L.Change(ca) are a list's edits and changes when its elements change as
-# ca says. List.take(xs, i) is the first i elements, List.drop(xs, i) the
+# A list's elements change as ca says: a value that only changes whole by
+# C.changes(~C.Whole.changes(~A)), a list by L.changes(~cb).
+# L.Edit.of(ca) and L.Change(ca) are a list's edits and changes when its
+# elements change as ca says. List.take(xs, i) is the first i elements, List.drop(xs, i) the
 # rest, and List.get(xs, i) the element at i, or None past the end.
 
 # LAW: a list's edits are made of its elements' values and changes.

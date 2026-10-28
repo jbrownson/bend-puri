@@ -87,6 +87,9 @@ Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
   select, under a panel that blocks both.
 - `app_test.bend`: replays scripted events through `app.bend` without a
   window.
+- `ilc.bend`: `dmap` on concrete lists of numbers: the change that mapping
+  makes, checked against mapping from scratch, and a map over lists of
+  lists.
 
 ## Dependencies
 
@@ -106,6 +109,7 @@ bend ilc/list/PROOF.bend      # or one module's laws
 bend examples/counter.bend    # runs the handler example
 bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
+bend examples/ilc.bend        # computes a mapped list's change
 bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 
