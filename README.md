@@ -37,15 +37,16 @@ input's change instead of recomputing it):
 - `change/`: changes to any value. A change structure (`ChangeStructure`)
   says how values change: the type of the values (`Value`), the type of
   their changes (`Delta`), and how to apply one. A type supplies its own
-  edits; `complete` turns them into a full change structure by adding what
-  every type has, as a `Change`: no change, starting over with a new value,
-  and one change then another. An `Inc<ca, cb>` pairs a function, from
-  values that change as `ca` says to values that change as `cb` says, with
-  its derivative, which gives the change to the function's result from a
-  change to its input. `lift` turns an `Inc` whose derivative handles single
-  edits into one that handles any change. The laws say what applying each
-  change returns, what `lift`'s derivative returns for each kind of change,
-  and that lifting a correct `Inc` gives a correct one.
+  edits; `complete` turns them into a full change structure whose changes
+  are `Change`s: an optional new value to start over from, then a run of
+  edits. That gives what every type has: no change (`keep`), starting over
+  (`replace`), and one change then another (`then`). An `Inc<ca, cb>` pairs
+  a function, from values that change as `ca` says to values that change as
+  `cb` says, with its derivative, which gives the change to the function's
+  result from a change to its input. `lift` turns an `Inc` whose derivative
+  handles single edits into one that handles any change. The laws say what
+  applying each change returns, what `lift`'s derivative returns for each
+  kind of change, and that lifting a correct `Inc` gives a correct one.
 - `list/`: a list's edits (insert, delete, and update an element in place),
   how a list changes by one edit given how its elements change (`structure`,
   which `C.complete` completes), `patch` to apply a change, and `map.inc`,

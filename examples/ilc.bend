@@ -13,7 +13,7 @@ def times10() -> C.Inc<adds(), adds()>:
 
 # Insert 5 at position 1, then add 1 to the element now at position 2.
 def change() -> C.Change.of(L.structure(~adds())):
-  C.Then{C.Edit{L.Insert{1n, 5}}, C.Edit{L.Update{2n, 1}}}
+  C.Change{None{}, [L.Insert{1n, 5}, L.Update{2n, 1}]}
 
 # The change that mapping times10 makes to [10, 20, 30] when [1, 2, 3]
 # changes, computed without mapping the list again.
@@ -24,7 +24,7 @@ def mapped() -> C.Change.of(L.structure(~adds())):
 # inner list inserts 70 there.
 def nested() -> C.Change.of(L.structure(~C.complete(~L.structure(~adds())))):
   L.dmap(~C.complete(~L.structure(~adds())), ~C.complete(~L.structure(~adds())), ~L.map.inc(~adds(), ~adds(), ~times10()),
-    C.Edit{L.Update{1n, C.Edit{L.Insert{0n, 7}}}}, [[1, 2], [3]])
+    C.Change{None{}, [L.Update{1n, C.Change{None{}, [L.Insert{0n, 7}]}}]}, [[1, 2], [3]])
 
 # The mapped change; [10, 20, 30] patched by it; [1, 2, 3] patched and
 # then mapped from scratch, which agrees; and the nested change.

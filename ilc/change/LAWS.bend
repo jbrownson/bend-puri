@@ -34,121 +34,171 @@ law structure_apply:
 # Changes to any value
 # --------------------
 # A type supplies its edits, and how one applies, as a change structure
-# ce. C.complete(ce) completes it into a full change structure: its
-# changes are Changes of ce's edits, C.Change.of(ce), and Keep (a change
-# that does nothing), Replace (a change from any value to any other) and
-# Then (composition) give it the rest of the theory's change structure.
+# ce. A Change of ce's edits, C.Change.of(ce), is a run of edits after an
+# optional new value to start from, and C.complete(ce) is the full change
+# structure it makes.
 
 # LAW: a Change of ce's edits is a Change of its values and edits.
 law change_of:
   for -ce: C.ChangeStructure
   {C.Change.of(ce) == C.Change<C.Value(ce), C.Delta(ce)> : Data}
 
-# LAW: keeping changes nothing.
-law apply_keep:
+# LAW: a change with no new value and no edits changes nothing.
+law apply_nil:
   for ~ce: C.ChangeStructure
   for a: C.Value(ce)
-  {C.apply(~ce, C.Keep{}, a) == a : C.Value(ce)}
+  {C.apply(~ce, C.Change{None{}, Nil{}}, a) == a : C.Value(ce)}
 
-# LAW: replacing gives the new value.
-law apply_replace:
+# LAW: a new value replaces the old one, and the edits follow.
+law apply_start:
   for ~ce: C.ChangeStructure
   for x: C.Value(ce)
+  for es: List<&2, C.Delta(ce)>
   for a: C.Value(ce)
-  {C.apply(~ce, C.Replace{x}, a) == x : C.Value(ce)}
+  {C.apply(~ce, C.Change{Some{x}, es}, a) == C.apply(~ce, C.Change{None{}, es}, x) : C.Value(ce)}
 
-# LAW: an edit is applied as ce says.
-law apply_edit:
+# LAW: the edits apply in order, as ce says.
+law apply_con:
   for ~ce: C.ChangeStructure
   for e: C.Delta(ce)
+  for es: List<&2, C.Delta(ce)>
   for a: C.Value(ce)
-  {C.apply(~ce, C.Edit{e}, a) == C.ChangeStructure.apply(ce)(e, a) : C.Value(ce)}
+  {C.apply(~ce, C.Change{None{}, e <> es}, a) == C.apply(~ce, C.Change{None{}, es}, C.ChangeStructure.apply(ce)(e, a)) : C.Value(ce)}
 
-# LAW: one change then another applies the first, then the second.
-law apply_then:
-  for ~ce: C.ChangeStructure
+# LAW: keep has no new value and no edits.
+law keep:
+  for -ce: C.ChangeStructure
+  {C.keep(ce) == C.Change{None{}, Nil{}} : C.Change.of(ce)}
+
+# LAW: replace(x) has x as its new value, and no edits.
+law replace:
+  for -ce: C.ChangeStructure
+  for x: C.Value(ce)
+  {C.replace(ce, x) == C.Change{Some{x}, Nil{}} : C.Change.of(ce)}
+
+# LAW: edit(e) is the single edit e.
+law edit:
+  for -ce: C.ChangeStructure
+  for e: C.Delta(ce)
+  {C.edit(ce, e) == C.Change{None{}, [e]} : C.Change.of(ce)}
+
+# LAW: p then a change that starts over is that change.
+law then_start:
+  for -ce: C.ChangeStructure
   for p: C.Change.of(ce)
-  for q: C.Change.of(ce)
-  for a: C.Value(ce)
-  {C.apply(~ce, C.Then{p, q}, a) == C.apply(~ce, q, C.apply(~ce, p, a)) : C.Value(ce)}
+  for y: C.Value(ce)
+  for es: List<&2, C.Delta(ce)>
+  {C.then(ce, p, C.Change{Some{y}, es}) == C.Change{Some{y}, es} : C.Change.of(ce)}
 
-# LAW: completing ce gives Changes of ce's edits, applied by C.apply.
+# LAW: p then a change that doesn't start over runs its edits after p's.
+law then_edits:
+  for -ce: C.ChangeStructure
+  for s: Maybe<&2, C.Value(ce)>
+  for ps: List<&2, C.Delta(ce)>
+  for qs: List<&2, C.Delta(ce)>
+  {C.then(ce, C.Change{s, ps}, C.Change{None{}, qs}) == C.Change{s, List.append(&2, C.Delta(ce), ps, qs)} : C.Change.of(ce)}
+
+# LAW: Changes of ce's edits change ce's values by C.apply.
 law complete:
   for ~ce: C.ChangeStructure
   {C.complete(~ce) == C.ChangeStructure{C.Value(ce), C.Change.of(ce), d => a => C.apply(~ce, d, a)} : C.ChangeStructure}
 
 # It follows that:
 
-# LAW: keeping first does nothing.
-law then_keep_left:
+# LAW: keeping changes nothing.
+law apply_keep:
   for ~ce: C.ChangeStructure
-  for q: C.Change.of(ce)
   for a: C.Value(ce)
-  {C.apply(~ce, C.Then{C.Keep{}, q}, a) == C.apply(~ce, q, a) : C.Value(ce)}
+  {C.apply(~ce, C.keep(ce), a) == a : C.Value(ce)}
 
-# LAW: keeping last does nothing.
-law then_keep_right:
+# LAW: replacing gives the new value.
+law apply_replace:
+  for ~ce: C.ChangeStructure
+  for x: C.Value(ce)
+  for a: C.Value(ce)
+  {C.apply(~ce, C.replace(ce, x), a) == x : C.Value(ce)}
+
+# LAW: an edit is applied as ce says.
+law apply_edit:
+  for ~ce: C.ChangeStructure
+  for e: C.Delta(ce)
+  for a: C.Value(ce)
+  {C.apply(~ce, C.edit(ce, e), a) == C.ChangeStructure.apply(ce)(e, a) : C.Value(ce)}
+
+# LAW: p then q applies p, then q.
+law apply_then:
   for ~ce: C.ChangeStructure
   for p: C.Change.of(ce)
+  for q: C.Change.of(ce)
   for a: C.Value(ce)
-  {C.apply(~ce, C.Then{p, C.Keep{}}, a) == C.apply(~ce, p, a) : C.Value(ce)}
+  {C.apply(~ce, C.then(ce, p, q), a) == C.apply(~ce, q, C.apply(~ce, p, a)) : C.Value(ce)}
+
+# LAW: keeping first is the same change.
+law then_keep_left:
+  for -ce: C.ChangeStructure
+  for q: C.Change.of(ce)
+  {C.then(ce, C.keep(ce), q) == q : C.Change.of(ce)}
+
+# LAW: keeping last is the same change.
+law then_keep_right:
+  for -ce: C.ChangeStructure
+  for p: C.Change.of(ce)
+  {C.then(ce, p, C.keep(ce)) == p : C.Change.of(ce)}
 
 # LAW: grouping doesn't matter.
 law then_assoc:
-  for ~ce: C.ChangeStructure
+  for -ce: C.ChangeStructure
   for p: C.Change.of(ce)
   for q: C.Change.of(ce)
   for r: C.Change.of(ce)
-  for a: C.Value(ce)
-  {C.apply(~ce, C.Then{C.Then{p, q}, r}, a) == C.apply(~ce, C.Then{p, C.Then{q, r}}, a) : C.Value(ce)}
+  {C.then(ce, C.then(ce, p, q), r) == C.then(ce, p, C.then(ce, q, r)) : C.Change.of(ce)}
 
 # Mapping a change
 # ----------------
-# C.map(fa, fe, d) maps d's new values by fa and its edits by fe.
+# C.map(fa, fe, d) maps d's new value by fa and its edits by fe.
 
-# LAW: mapping keeping keeps.
-law map_keep:
+# LAW: mapping a change maps its new value and each of its edits.
+law map:
   for ~A: Data
   for ~EA: Data
   for ~B: Data
   for ~EB: Data
   for ~fa: A -> B
   for ~fe: EA -> EB
-  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Keep{}) == C.Keep{} : C.Change<B, EB>}
+  for s: Maybe<&2, A>
+  for es: List<&2, EA>
+  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Change{s, es}) == C.Change{C.map.start(~A, ~B, ~fa, s), C.map.edits(~EA, ~EB, ~fe, es)} : C.Change<B, EB>}
 
-# LAW: mapping a replacement maps the new value.
-law map_replace:
+# LAW: no new value maps to no new value.
+law map_start_none:
   for ~A: Data
-  for ~EA: Data
   for ~B: Data
-  for ~EB: Data
   for ~fa: A -> B
-  for ~fe: EA -> EB
+  {C.map.start(~A, ~B, ~fa, None{}) == None{} : Maybe<&2, B>}
+
+# LAW: a new value maps by fa.
+law map_start_some:
+  for ~A: Data
+  for ~B: Data
+  for ~fa: A -> B
   for x: A
-  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Replace{x}) == C.Replace{fa(x)} : C.Change<B, EB>}
+  {C.map.start(~A, ~B, ~fa, Some{x}) == Some{fa(x)} : Maybe<&2, B>}
 
-# LAW: mapping an edit maps the edit.
-law map_edit:
-  for ~A: Data
+# LAW: no edits map to no edits.
+law map_edits_nil:
   for ~EA: Data
-  for ~B: Data
   for ~EB: Data
-  for ~fa: A -> B
+  for ~fe: EA -> EB
+  {C.map.edits(~EA, ~EB, ~fe, Nil{}) == Nil{} : List<&2, EB>}
+
+# LAW: each edit maps by fe, in order.
+law map_edits_con:
+  for ~EA: Data
+  for ~EB: Data
   for ~fe: EA -> EB
   for e: EA
-  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Edit{e}) == C.Edit{fe(e)} : C.Change<B, EB>}
-
-# LAW: mapping one change then another maps each, in the same order.
-law map_then:
-  for ~A: Data
-  for ~EA: Data
-  for ~B: Data
-  for ~EB: Data
-  for ~fa: A -> B
-  for ~fe: EA -> EB
-  for p: C.Change<A, EA>
-  for q: C.Change<A, EA>
-  {C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, C.Then{p, q}) == C.Then{C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, p), C.map(~A, ~EA, ~B, ~EB, ~fa, ~fe, q)} : C.Change<B, EB>}
+  for es: List<&2, EA>
+  {C.map.edits(~EA, ~EB, ~fe, e <> es) == fe(e) <> C.map.edits(~EA, ~EB, ~fe, es) : List<&2, EB>}
 
 # Incremental functions
 # ---------------------
@@ -198,7 +248,7 @@ law lift_keep:
   for ~cb: C.ChangeStructure
   for ~g: C.Inc<ca, C.complete(~cb)>
   for a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.Keep{}, a) == C.Keep{} : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.keep(ca), a) == C.keep(cb) : C.Change.of(cb)}
 
 # LAW: replacing the input replaces the result, with f of the new value.
 law lift_replace:
@@ -207,7 +257,7 @@ law lift_replace:
   for ~g: C.Inc<ca, C.complete(~cb)>
   for x: C.Value(ca)
   for a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.Replace{x}, a) == C.Replace{C.Inc.f(ca, C.complete(~cb), g)(x)} : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.replace(ca, x), a) == C.replace(cb, C.Inc.f(ca, C.complete(~cb), g)(x)) : C.Change.of(cb)}
 
 # LAW: one edit gives g's change.
 law lift_edit:
@@ -216,10 +266,9 @@ law lift_edit:
   for ~g: C.Inc<ca, C.complete(~cb)>
   for e: C.Delta(ca)
   for a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.Edit{e}, a) == C.Inc.df(ca, C.complete(~cb), g)(a, e) : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.edit(ca, e), a) == C.Inc.df(ca, C.complete(~cb), g)(a, e) : C.Change.of(cb)}
 
-# LAW: one change then another lifts the second from the value the first
-# produced.
+# LAW: p then q lifts q from the value p produced.
 law lift_then:
   for ~ca: C.ChangeStructure
   for ~cb: C.ChangeStructure
@@ -227,7 +276,7 @@ law lift_then:
   for p: C.Change.of(ca)
   for q: C.Change.of(ca)
   for +a: C.Value(ca)
-  {C.lift.df(~ca, ~cb, ~g, C.Then{p, q}, a) == C.Then{C.lift.df(~ca, ~cb, ~g, p, a), C.lift.df(~ca, ~cb, ~g, q, C.apply(~ca, p, a))} : C.Change.of(cb)}
+  {C.lift.df(~ca, ~cb, ~g, C.then(ca, p, q), a) == C.then(cb, C.lift.df(~ca, ~cb, ~g, p, a), C.lift.df(~ca, ~cb, ~g, q, C.apply(~ca, p, a))) : C.Change.of(cb)}
 
 # It follows that:
 
@@ -249,7 +298,7 @@ law recompute:
   for ~ca: C.ChangeStructure
   for ~cb: C.ChangeStructure
   for ~f: C.Value(ca) -> C.Value(cb)
-  {C.recompute(~ca, ~cb, ~f) == C.Inc{f, a => d => C.Replace{f(C.ChangeStructure.apply(ca)(d, a))}} : C.Inc<ca, C.complete(~cb)>}
+  {C.recompute(~ca, ~cb, ~f) == C.Inc{f, a => d => C.replace(cb, f(C.ChangeStructure.apply(ca)(d, a)))} : C.Inc<ca, C.complete(~cb)>}
 
 # It follows that:
 

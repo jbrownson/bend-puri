@@ -78,9 +78,9 @@ def map.at(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, i:
   d: C.Delta(ca)) -> C.Change.of(structure(~cb)):
   match m:
     case None{}:
-      C.Keep{}
+      C.keep(structure(~cb))
     case Some{x}:
-      C.Edit{Update{i, C.Inc.df(ca, cb, g)(x, d)}}
+      C.edit(structure(~cb), Update{i, C.Inc.df(ca, cb, g)(x, d)})
 
 # map's derivative for one edit, from the list before it: an insert or a
 # delete carries over, and an update updates the same position by g's
@@ -89,9 +89,9 @@ def map.edit(~ca: C.ChangeStructure, ~cb: C.ChangeStructure, ~g: C.Inc<ca, cb>, 
   e: Edit.of(ca)) -> C.Change.of(structure(~cb)):
   match e:
     case Insert{i, x}:
-      C.Edit{Insert{i, C.Inc.f(ca, cb, g)(x)}}
+      C.edit(structure(~cb), Insert{i, C.Inc.f(ca, cb, g)(x)})
     case Delete{i}:
-      C.Edit{Delete{i}}
+      C.edit(structure(~cb), Delete{i})
     case Update{+i, d}:
       map.at(~ca, ~cb, ~g, i, List.get(&2, C.Value(ca), xs, i), d)
 
