@@ -34,27 +34,27 @@ every module's proofs.
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
 
-- `change/`: changes to any value. A `Changes` says how values change: the
-  type of the values (`Value`), the type of their changes (`Delta`), and how
-  to apply one. A type supplies its own edits; `Change` adds what every type
-  has: no change, starting over with a new value, and one change then
-  another. An `Inc<ca, cb>` pairs a function, from values that change as
-  `ca` says to values that change as `cb` says, with its derivative, which
-  gives the change to the function's result from a change to its input.
-  `lift` turns an `Inc` whose derivative handles single edits into one that
-  handles any change. The laws say what applying each change returns, what
-  `lift`'s derivative returns for each kind of change, and that lifting a
-  correct `Inc` gives a correct one.
-- `list/`: a list's edits (insert, delete, and update an element in
-  place), how a list changes given how its elements do (`edits`,
-  `changes`), `patch` to apply a change, and `map.inc`, which maps an `Inc`
-  over lists; its derivative is `dmap`. An element's change can be of any
-  type, with its own way to apply it: a `Change` of the element, or
+- `change/`: changes to any value. A change structure (`ChangeStructure`)
+  says how values change: the type of the values (`Value`), the type of
+  their changes (`Delta`), and how to apply one. A type supplies its own
+  edits; `Change` adds what every type has: no change, starting over with a
+  new value, and one change then another. An `Inc<ca, cb>` pairs a function,
+  from values that change as `ca` says to values that change as `cb` says,
+  with its derivative, which gives the change to the function's result from
+  a change to its input. `lift` turns an `Inc` whose derivative handles
+  single edits into one that handles any change. The laws say what applying
+  each change returns, what `lift`'s derivative returns for each kind of
+  change, and that lifting a correct `Inc` gives a correct one.
+- `list/`: a list's edits (insert, delete, and update an element in place),
+  how a list changes given how its elements do (`Edit.structure`,
+  `Change.structure`), `patch` to apply a change, and `map.inc`, which maps
+  an `Inc` over lists; its derivative is `dmap`. An element's change can be
+  of any type, with its own way to apply it: a `Change` of the element, or
   something else entirely. The laws cover changes whose positions are in
-  range (`valid`), and say what each edit does, what `dmap` returns for
-  each kind of change, that `map.inc(g)` is correct when `g` is, that
-  `dmap` acts exactly where the change acts, and that it turns valid
-  changes into valid ones.
+  range (`valid`), and say what each edit does, what `dmap` returns for each
+  kind of change, that `map.inc(g)` is correct when `g` is, that `dmap` acts
+  exactly where the change acts, and that it turns valid changes into valid
+  ones.
 
 The approach follows Phil Freeman's
 [Purview](https://github.com/paf31/purescript-purview), a PureScript UI
