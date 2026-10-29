@@ -2,9 +2,9 @@ import Base
 import ../puri/handler/handler.bend as Hd
 import ../puri/geom.bend as G
 import ../puri/frame/frame.bend as F
-import ../raster/raster.bend as R
+import ../window/window.bend as W
 
-# Boxes you can hover and click. Run with: bend app.bend
+# Boxes you can hover and click. Run with: bend app.bend -o app && ./app
 
 # The app's state: where the pointer rests, and which box is selected
 # (0 for none). Puri keeps nothing; all of it lives here.
@@ -16,7 +16,7 @@ def Act() -> Type:
   Model -> Model
 
 def Scene() -> Type:
-  F.Frame<Act(), Event, U32, R.Draw>
+  F.Frame<Act(), Event, U32, W.Draw>
 
 type Color is Data:
   Plain{}
@@ -92,7 +92,7 @@ def box(+r: G.Rect, +id: U32, +selected: U32) -> Scene():
   F.Frame{
     e => box.on(r, id, e),
     p => box.claim(G.Rect.contains(r, p), id),
-    h => [R.FillRect{r, Color.rgb(box.color(U32.is_eq(selected, id), h, id))}]}
+    h => [W.FillRect{r, Color.rgb(box.color(U32.is_eq(selected, id), h, id))}]}
 
 def panel.claim(inside: Bool) -> Maybe<F.Claim<U32>>:
   match inside:
@@ -123,10 +123,10 @@ def panel(+r: G.Rect) -> Scene():
   F.Frame{
     e => panel.on(r, e),
     p => panel.claim(G.Rect.contains(r, p)),
-    h => [R.FillRect{r, Color.rgb(Shaded{})}]}
+    h => [W.FillRect{r, Color.rgb(Shaded{})}]}
 
 def over(base: Scene(), above: Scene()) -> Scene():
-  F.Frame.over(Act(), Event, U32, R.Draw, base, above)
+  F.Frame.over(Act(), Event, U32, W.Draw, base, above)
 
 # The whole UI, built fresh from the model.
 def scene(+selected: U32) -> Scene():
@@ -181,17 +181,16 @@ def Model.pointer(m: Model) -> G.Point:
     case Model{p, s}:
       p
 
-def painting(r: Hd.Handler(Act(), Event) & List<&2, R.Draw>) -> List<&2, R.Draw>:
+def painting(r: Hd.Handler(Act(), Event) & List<&2, W.Draw>) -> List<&2, W.Draw>:
   (_, paint) = r
   paint
 
-# Present the scene at the pointer, then rasterize its painting.
-def view(+m: Model) -> Model & Image:
-  +cmds = painting(F.Frame.present(Act(), Event, U32, R.Draw, scene(Model.selected(m)), Model.pointer(m)))
-  (m, R.Raster.image(9n, cmds, background()))
+# Present the scene at the pointer, for its painting.
+def view(+m: Model) -> List<&2, W.Draw>:
+  painting(F.Frame.present(Act(), Event, U32, W.Draw, scene(Model.selected(m)), Model.pointer(m)))
 
 def initial() -> Model:
   Model{G.Point.of(0, 0), 0}
 
 def main() -> IO(Unit):
-  App.run(~Model, ~App{+m => view(m), tick}, "Puri boxes", 480, 360, initial())
+  W.run(~Model, ~(+m => view(m)), ~tick, ~background(), "Puri boxes", 480, 360, initial())

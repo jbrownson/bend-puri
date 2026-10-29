@@ -27,10 +27,6 @@ every module's proofs.
   deferred ink. `Frame.present` runs a frame's phases in order: it resolves
   hover from the settled probes, then paints with that answer.
 - `geom.bend`: points and rectangles, with signed 32-bit coordinates.
-- `order.bend`: `I32`'s order, proved from the packages below:
-  transitivity, totality, and what adding 1 does.
-- `arith.bend`: `U32` and `I32` arithmetic the packages don't have:
-  associativity, a shift as a doubling, and the sign bit as adding 2^31.
 
 `ilc/`, incremental computation (ILC: compute a result's change from the
 input's change instead of recomputing it):
@@ -71,19 +67,14 @@ library built on ILC, and his
 from the theory in Cai, Giarrusso, Rendel and Ostermann, ["A Theory of
 Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
 
-`raster/`, the backend:
+`window/`, the native window:
 
-- `raster.bend`: turns fill commands into the `Image` quadtree a Bend window
-  shows, splitting only where there's an edge.
-- `spec.bend`: what the raster must produce, stated the slow, obvious way:
-  each pixel takes the color of the topmost command whose rectangle contains
-  it, or the background. It also states four geometric facts about `I32`
-  coordinates that the proof rests on.
-- `LAWS.bend`: every pixel of a rasterized window is the spec's color.
-- `PROOF.bend`: the proof, including the four geometric facts.
-- `raster_test.bend`: compares every pixel of a few scenes against the spec,
-  and tries the four facts on every combination of edge-case values in the
-  compiled program.
+- `window.bend`: what an app paints (`Draw`: a rectangle filled with a
+  color), and running a puri app in Ankra's window, drawn on the GPU. Each
+  fill in the app's painting becomes an operation in a Chromi draw list,
+  later fills on top, which Voltra draws and presents. Ankra's input arrives
+  as Base's events, so an app's handlers are what they would be for Bend's
+  own window. `play` replays events through an app without a window.
 
 `examples/`:
 
@@ -108,13 +99,15 @@ Changes for Higher-Order Languages"](https://arxiv.org/abs/1312.0658).
 
 ## Dependencies
 
-Packages from [BendHub](https://hub.bend-lang.com/packages), imported by
-content hash, so `bend` fetches exactly that code on first use and checks it:
+`bend-kit-int` (`0x4eed9d7a…`), the `I32` used for coordinates, from
+[BendHub](https://hub.bend-lang.com/packages). It's imported by content
+hash, so `bend` fetches exactly that code on first use and checks it.
 
-- `bend-kit-int` (`0x4eed9d7a…`): the `I32` used for coordinates.
-- `bend-kit-lemmas` (`0x917f5ed7…`): proved laws relating `U32` arithmetic and
-  order to `Nat`.
-- `bend-mathlib` 0.7.4.0 (`0xcdaf59a0…`): proved lemmas about `Nat` and `Bool`.
+The [AMAGE](https://github.com/amage-si) libraries, copied into
+`vendor/amage/` at the commits its README lists: Ankra (the window and its
+events), Voltra (Vulkan), Chromi (draw lists), and Runika, Syllo, Dithra
+and Splina (text, which nothing here uses yet). Ankra and Voltra each
+include a native bridge in C.
 
 ## Running
 
@@ -126,7 +119,6 @@ bend examples/hover.bend      # runs the hover example
 bend examples/app_test.bend   # replays events through the app headlessly
 bend examples/ilc.bend        # computes a mapped list's edits
 bend examples/bars_test.bend  # replays presses through the bars app
-bend raster/raster_test.bend  # checks pixels and the geometric facts
 ```
 
 `bend <file> --verdict` checks a proof a second time with Bend's BendTT
@@ -143,8 +135,10 @@ bend examples/app.bend -o app && ./app
 bend examples/bars.bend -o bars && ./bars
 ```
 
-On Linux this needs clang and the X11 headers (`clang libx11-dev` on
-Debian/Ubuntu), run from a desktop session so `$DISPLAY` is set. On
-macOS it needs clang from the Xcode command line tools.
+They open an X11 window, directly or through XWayland, and draw with
+Vulkan. That needs Linux, clang, the X11 and XRandR headers (`clang
+libx11-dev libxrandr-dev` on Debian/Ubuntu), a Vulkan 1.3 driver, and a
+desktop session so `$DISPLAY` is set. Sizes and positions are physical
+pixels, so on a scaled display the apps look small.
 
 Tested with Bend 2.0.39.

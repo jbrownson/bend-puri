@@ -29,9 +29,11 @@ open items are settled.
   Jake filed amage-si/runika#1 (the font checksum) himself; a fix for it
   was drafted and deliberately shelved. Don't bring it up.
 - **Verifying a change:** `bend PROOF.bend` and `bend PROOF.bend --verdict`
-  must both pass, plus the examples and `bend raster/raster_test.bend`.
+  must both pass, plus the examples.
   For new laws, run a sabotage check: break the code or the law and confirm
   the checker rejects it.
+  Lean 4.34.0 isn't installed on omarchy yet, so `--verdict` can't run
+  there (`bend PROOF.bend` can).
 
 ## Where the code stands
 
@@ -66,9 +68,22 @@ commit messages. As of `26a1506`:
   heights are a cache patched by `dmap`'s edits. The test checks the cache
   against recomputing. It works, but isn't compelling: the cached work is
   trivial, and every frame is redrawn whole.
-- **`vendor/amage/`:** Runika, Syllo, Dithra, Splina and Chromi, CPU only,
-  at the commits in its README. Voltra (GPU) and Ankra (window) aren't
-  vendored; both include C.
+- **`window/window.bend`:** runs a puri app (a model, a `view` giving its
+  painting as `R.Draw`s, and Base's `tick`) in Ankra's native window,
+  drawn by Chromi's GPU path through Voltra. `app.bend` and `bars.bend` use
+  it; nothing uses Bend's own window any more. `W.play` replaces
+  `App.play` in the tests. It defines `Draw`, the fill the apps paint.
+  Checked once on the CPU, before `raster/` was removed: its painting of
+  both apps equaled `raster/spec.bend`'s colors on every pixel (and
+  differed when the paint order was reversed).
+- **Removed at Jake's request:** `raster/`, our proved CPU rasterizer
+  (fills into Base's quadtree `Image`), and `puri/order.bend` and
+  `puri/arith.bend`, the `I32` order and arithmetic proofs only it used,
+  with the BendHub packages `bend-kit-lemmas` and `bend-mathlib` they
+  imported. All of it is in history at `c9469f1`.
+- **`vendor/amage/`:** Runika, Syllo, Dithra, Splina, Chromi (with
+  `gpu.bend`), Voltra and Ankra, at the commits in its README. Voltra and
+  Ankra include C.
 
 ## Open decisions
 
@@ -80,17 +95,22 @@ commit messages. As of `26a1506`:
    signatures (code without context passes `Unit`). The TODO app needs it,
    to cache each row's laid-out text. It changes laws Jake has read, so
    ask first.
-2. **Rendering speed.** Too slow in absolute terms; see the measurements
-   below. Options:
-   - **Chromi's GPU path** through Voltra and Ankra. This is why the work
-     moved to Jake's machine. Nothing has been tried yet.
-   - **A flat-array CPU renderer.** Draw rectangles, rounded corners and
-     Dithra's glyph masks into an `Array<U32>`, then build the quadtree
-     `Image` Base's window wants. Estimated ~3 ms per full frame, but only
-     the pieces were measured. Threading the array through the quadtree
-     build is awkward given the restrictions below.
-   - **Improving Chromi's CPU path upstream.** Rounded rectangles seem to
-     compute coverage over their whole area.
+2. **Rendering speed: decided, the GPU path** (Jake: "the bend window is
+   a toy, we'll need an external window"). See the measurements below.
+   What's left:
+   - Laying out and rasterizing text is now most of a frame's cost when
+     it's redone every frame (~8 ms against ~0.5 ms with glyphs reused),
+     which is what the TODO app's cached text is for.
+   - Coordinates are physical pixels and Ankra doesn't discover a scale,
+     so on Jake's 2x display (Hyprland, `xwayland:force_zero_scaling`)
+     the apps are a quarter of the intended size. Chromi's scenes take a
+     scale; events would need dividing by it.
+   - On screen, colors come out a few levels off (background `0x202428`
+     captures as `0x24272b`), most in dark colors. Hyprland's color
+     management is on, and the offscreen readback is exact, so it's
+     probably the compositor. Not night light: it was off, and every
+     channel moves by the same curve, roughly sRGB decoded then re-encoded
+     as gamma 2.2.
 3. **The TODO app**, the next demo, using AMAGE for text:
    - Items carry their own edits (`Toggle`).
    - "N items left" is kept as an incremental count (a fold).
@@ -126,7 +146,14 @@ damage-driven repaint.
   the bottleneck for pixel work.
 - **Base's window** (`App.run`, `Window.frame`) takes only the quadtree
   `Image`; its C code walks the tree. It sends Backspace as `Key` 127 and
-  Return as 13. `App.play` replays events without a window.
+  Return as 13; Ankra uses the same key codes and button numbers.
+- **Ankra's window:** pointer positions are `F32` physical pixels, sizes
+  `U32`. Hyprland now takes Lua for `hyprctl dispatch`; to close a window
+  the way a user would:
+  `hyprctl dispatch 'hl.dsp.window.close({ window = "address:0x..." })'`.
+- **A compound type argument takes parentheses:** `Loop.Step<(M & R)>`.
+  A `+` binding needs its type to be `Data`, so a generic model is
+  `~M: Data`.
 - **Font:** `/usr/share/fonts/liberation/LiberationSans-Regular.ttf`.
 - **Text into a Chromi scene.** This worked on 2.0.39: load with `F.load`,
   then pass the `Result` to a def, then this. Imports: `F` is Runika
@@ -166,8 +193,7 @@ def text(+font: F.Font, label: String, s: S.Scene, +x: F32, +top: F32, +color: U
 
 ## Measurements
 
-Native builds, in a 4-core cloud container. Expect different numbers on
-omarchy; the proportions are what matter.
+Native builds, in a 4-core cloud container.
 
 | What | Time |
 |---|---|
@@ -176,9 +202,23 @@ omarchy; the proportions are what matter.
 | ...of which, 8 rounded rectangles | ~16 ms |
 | ...of which, blending ~200 pre-rasterized glyphs | ~14 ms |
 | ...of which, laying out and rasterizing the 8 labels | ~4 ms |
-| 8 plain rectangles (Chromi) / (our proved raster) | 0.3 ms / 0.9 ms |
+| 8 plain rectangles (Chromi) / (our proved raster, since removed) | 0.3 ms / 0.9 ms |
 | Blending a pixel in Chromi's quadtree, against a flat `Array` | ~400 ns, against ~0.9 ns |
 | Building a 512×512 quadtree `Image` from pixels | ~2.3 ms, worst case |
+
+The same frame on omarchy (Core Ultra X7 358H, Arc B390, power-saver
+profile), averaged over 50 frames on the CPU and 500 on the GPU. The GPU
+column is Chromi's GPU path through Voltra, offscreen. Chromi's CPU path
+uses one core: 1, 4 and 16 threads give the same times.
+
+| What | CPU | GPU |
+|---|---|---|
+| The frame, glyphs already rasterized | ~29 ms | ~0.5 ms |
+| The frame from scratch | 34–37 ms | ~8.2 ms |
+| 8 rounded rectangles | 17–18 ms | ~0.2 ms |
+| Laying out and rasterizing the 8 labels | ~6 ms | (on the CPU) |
+| Drawing, then reading the pixels back, each frame | | ~5 ms |
+| Pixels differing from Chromi's CPU output | | 0 of 172,800 |
 
 ## Remote Control
 

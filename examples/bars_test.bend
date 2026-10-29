@@ -1,4 +1,5 @@
 import Base
+import ../window/window.bend as W
 import ./bars.bend as B
 
 def same(xs: List<&2, U32>, ys: List<&2, U32>) -> Bool:
@@ -42,7 +43,7 @@ def press(+x: U32, +y: U32, +b: U32) -> List<Event>:
   [Mouse{x, y, b, True{}}, Mouse{x, y, b, False{}}]
 
 def play(frames: List<List<Event>>) -> IO(Maybe<B.Model>):
-  App.play(~B.Model, ~App{+m => B.view(m), B.tick}, frames, B.initial())
+  W.play(~B.Model, ~B.tick, frames, B.initial())
 
 def main() -> IO(Unit):
   do IO<Unit>:

@@ -6,7 +6,7 @@ import ../puri/ask/ask.bend as A
 import ../puri/handler/handler.bend as Hd
 import ../puri/geom.bend as G
 import ../puri/frame/frame.bend as F
-import ../raster/raster.bend as R
+import ../window/window.bend as W
 
 # Bars you can grow, add and remove. Left-click a bar to grow it,
 # right-click it to remove it; "+" adds a bar, and the grey button resets.
@@ -47,13 +47,13 @@ def Act() -> Type:
   List<&2, U32> -> Edits()
 
 def Scene() -> Type:
-  F.Frame<Act(), Event, U32, R.Draw>
+  F.Frame<Act(), Event, U32, W.Draw>
 
 def background() -> U32:
   2106408
 
 def over(base: Scene(), above: Scene()) -> Scene():
-  F.Frame.over(Act(), Event, U32, R.Draw, base, above)
+  F.Frame.over(Act(), Event, U32, W.Draw, base, above)
 
 def nothing() -> Scene():
   F.Frame{Hd.Handler.empty(Act(), Event), A.Ask.none(G.Point, F.Claim<U32>), h => []}
@@ -113,7 +113,7 @@ def bar(+r: G.Rect, +i: Nat, +id: U32) -> Scene():
   F.Frame{
     e => bar.on(r, i, e),
     p => claim(G.Rect.contains(r, p), id),
-    h => [R.FillRect{r, lit(h, id, 4878245, 7317724)}]}
+    h => [W.FillRect{r, lit(h, id, 4878245, 7317724)}]}
 
 # The bars, left to right from position i, with hover targets 1, 2, ...
 def bars(hs: List<&2, U32>, +i: U32) -> Scene():
@@ -168,10 +168,10 @@ def Button.lit(b: Button) -> U32:
       11053224
 
 # A "+" for the add button, and nothing on the reset button.
-def Button.mark(b: Button) -> List<&2, R.Draw>:
+def Button.mark(b: Button) -> List<&2, W.Draw>:
   match b:
     case Add{}:
-      [R.FillRect{G.Rect.of(52, 33, 16, 4), 15790320}, R.FillRect{G.Rect.of(58, 27, 4, 16), 15790320}]
+      [W.FillRect{G.Rect.of(52, 33, 16, 4), 15790320}, W.FillRect{G.Rect.of(58, 27, 4, 16), 15790320}]
     case Reset{}:
       []
 
@@ -193,7 +193,7 @@ def button(+b: Button) -> Scene():
   F.Frame{
     e => button.on(b, e),
     p => claim(G.Rect.contains(Button.rect(b), p), Button.id(b)),
-    h => R.FillRect{Button.rect(b), lit(h, Button.id(b), Button.rgb(b), Button.lit(b))} <> Button.mark(b)}
+    h => W.FillRect{Button.rect(b), lit(h, Button.id(b), Button.rgb(b), Button.lit(b))} <> Button.mark(b)}
 
 # The app
 # -------
@@ -257,13 +257,12 @@ def tick.go(events: List<Event>, +m: Model) -> Maybe<Model>:
 def tick(events: List<Event>, m: Model) -> IO(Maybe<Model>):
   IO.pure(Maybe<Model>, tick.go(events, m))
 
-def painting(r: Hd.Handler(Act(), Event) & List<&2, R.Draw>) -> List<&2, R.Draw>:
+def painting(r: Hd.Handler(Act(), Event) & List<&2, W.Draw>) -> List<&2, W.Draw>:
   (_, paint) = r
   paint
 
-def view(+m: Model) -> Model & Image:
-  +cmds = painting(F.Frame.present(Act(), Event, U32, R.Draw, scene(Model.heights(m)), Model.pointer(m)))
-  (m, R.Raster.image(9n, cmds, background()))
+def view(+m: Model) -> List<&2, W.Draw>:
+  painting(F.Frame.present(Act(), Event, U32, W.Draw, scene(Model.heights(m)), Model.pointer(m)))
 
 def main() -> IO(Unit):
-  App.run(~Model, ~App{+m => view(m), tick}, "Puri bars", 480, 360, initial())
+  W.run(~Model, ~(+m => view(m)), ~tick, ~background(), "Puri bars", 480, 360, initial())
